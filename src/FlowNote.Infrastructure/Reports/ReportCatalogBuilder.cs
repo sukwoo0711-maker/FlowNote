@@ -140,7 +140,8 @@ public sealed class ReportCatalogBuilder
             WorkStatusAsOf = entry.WorkItemId is null ? null : WorkAsOf.StatusAsOf(lifecycle, entry.WorkItemId),
             BodyRevision = ContentRevision.Sha256Hex(entry.Body + "|" + (entry.UpdatedAtUtc?.ToString("O") ?? "")),
             OutOfRange = extra || localDate != reportDate,
-            Files = files
+            Files = files,
+            AssistProvenance = entry.Kind == EntryKind.Note ? _database.Assist.Provenance(entry.Id) : null
         };
     }
 }

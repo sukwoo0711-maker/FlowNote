@@ -1,0 +1,31 @@
+{
+  "synthetic": true,
+  "input": {
+    "entry_id": "mixed-01",
+    "note_text": "인버터 구동 파형을 확인 중이다. 세탁 코스 변경 요청이 왔지만 나중에 확인한다.",
+    "attachment_names": [],
+    "candidates": [
+      {
+        "thread_id": "ctx-inverter",
+        "title": "인버터 과전류",
+        "excerpts": [
+          "인버터 전원을 켜면 과전류가 발생한다. 초기 구동 로그를 확인 중이다."
+        ]
+      },
+      {
+        "thread_id": "ctx-course",
+        "title": "세탁 코스 사양",
+        "excerpts": [
+          "세탁 코스 표에서 헹굼 단계 요구사항을 비교한다."
+        ]
+      },
+      {
+        "thread_id": "ctx-release",
+        "title": "릴리스 빌드",
+        "excerpts": [
+          "릴리스 빌드를 만들고 배포 패키지 결과를 확인한다."
+        ]
+      }
+    ]
+  }
+}

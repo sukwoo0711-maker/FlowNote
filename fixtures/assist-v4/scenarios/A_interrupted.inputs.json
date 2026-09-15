@@ -1,0 +1,55 @@
+{
+  "synthetic": true,
+  "initial_threads": [
+    {
+      "thread_id": "ctx-inverter",
+      "title": "인버터 과전류",
+      "excerpts": [
+        "인버터 전원을 켜면 과전류가 발생한다. 초기 구동 로그를 확인 중이다."
+      ]
+    },
+    {
+      "thread_id": "ctx-course",
+      "title": "세탁 코스 사양",
+      "excerpts": [
+        "세탁 코스 표에서 헹굼 단계 요구사항을 비교한다."
+      ]
+    },
+    {
+      "thread_id": "ctx-release",
+      "title": "릴리스 빌드",
+      "excerpts": [
+        "릴리스 빌드를 만들고 배포 패키지 결과를 확인한다."
+      ]
+    }
+  ],
+  "events": [
+    {
+      "entry_id": "switch-01",
+      "recorded_at": "2026-09-15T09:00:00+09:00",
+      "occurred_at": "2026-09-15T09:00:00+09:00",
+      "source": "user_note",
+      "note_text": "인버터 초기 구동 로그를 확인하고 있다.",
+      "manual_thread_id": null,
+      "attachments": []
+    },
+    {
+      "entry_id": "switch-02",
+      "recorded_at": "2026-09-15T09:15:00+09:00",
+      "occurred_at": "2026-09-15T09:15:00+09:00",
+      "source": "user_note",
+      "note_text": "요청받은 세탁 코스 표를 열어 헹굼 단계를 비교하고 있다.",
+      "manual_thread_id": null,
+      "attachments": []
+    },
+    {
+      "entry_id": "switch-03",
+      "recorded_at": "2026-09-15T10:00:00+09:00",
+      "occurred_at": "2026-09-15T10:00:00+09:00",
+      "source": "user_note",
+      "note_text": "다시 인버터 게이트 드라이버의 초기 구동 순서를 확인하고 있다.",
+      "manual_thread_id": null,
+      "attachments": []
+    }
+  ]
+}

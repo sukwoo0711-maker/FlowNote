@@ -35,7 +35,8 @@ public static class ReportBuilder
                 WorkItemId = candidate.WorkItemId,
                 WorkTitle = candidate.WorkTitle,
                 OutOfRange = candidate.OutOfRange,
-                Section = Classify(candidate)
+                Section = Classify(candidate),
+                AssistProvenance = candidate.AssistProvenance
             });
         }
 
@@ -222,6 +223,11 @@ public static class ReportBuilder
                 text.AppendLine();
                 text.AppendLine(string.IsNullOrWhiteSpace(item.Body) ? "_(본문 없음)_" : item.Body);
                 text.AppendLine();
+                if (!string.IsNullOrWhiteSpace(item.AssistProvenance))
+                {
+                    text.AppendLine("파생 연결: " + item.AssistProvenance);
+                    text.AppendLine();
+                }
                 var linked = files.Where(file => file.EntryId == item.Id).ToList();
                 if (linked.Count > 0)
                 {

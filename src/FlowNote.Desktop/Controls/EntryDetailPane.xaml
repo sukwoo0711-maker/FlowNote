@@ -17,11 +17,33 @@
                 <Image Margin="0,16,0,0" MaxHeight="220" Stretch="Uniform" HorizontalAlignment="Left"
                        Source="{Binding DetailImagePath, TargetNullValue={x:Null}}"/>
                 <TextBlock Margin="0,16,0,0" Foreground="{StaticResource TextSecondaryBrush}" Text="{Binding DetailAttachments}" TextWrapping="Wrap"/>
+                <TextBlock Margin="0,16,0,0" FontSize="12" TextWrapping="Wrap" Text="{Binding AssistDetailText}"
+                           Visibility="{Binding ShowAssistDetail, Converter={StaticResource BoolToVis}}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                     <Button Style="{StaticResource SecondaryButton}" Content="업무 연결" Command="{Binding LinkDetailWorkCommand}"/>
                     <Button Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" Content="다음 행동으로 표시"
                             Command="{Binding MarkNextActionFromDetailCommand}"/>
                 </StackPanel>
+                <TextBlock Margin="0,16,0,0" FontSize="12" FontWeight="SemiBold" Text="파생 연결 수정"/>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Style="{StaticResource SecondaryButton}" Content="연결 해제" Command="{Binding ClearAssistCommand}"
+                            AutomationProperties.Name="파생 연결 해제"/>
+                    <Button Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" Content="새 묶음"
+                            Command="{Binding NewAssistThreadCommand}" AutomationProperties.Name="새 파생 묶음"/>
+                    <Button Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" Content="되돌리기"
+                            Command="{Binding UndoAssistCommand}" AutomationProperties.Name="연결 수정 되돌리기"/>
+                </StackPanel>
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding AssistThreadChoices}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource SecondaryButton}" HorizontalAlignment="Stretch" Margin="0,0,0,6"
+                                    Content="{Binding Title}"
+                                    Command="{Binding DataContext.AssignAssistThreadCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    AutomationProperties.Name="다른 묶음으로 변경"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <TextBlock Margin="0,24,0,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
                            Text="기록 시각은 작업 시작이 아닙니다. 간격은 근무시간으로 계산하지 않습니다."/>
             </StackPanel>

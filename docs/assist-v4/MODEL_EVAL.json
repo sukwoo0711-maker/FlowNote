@@ -1,0 +1,10 @@
+﻿{
+    "reason":  "Ollama CLI not installed on this PC. No model pull was performed.",
+    "layer":  "MODEL_REAL",
+    "semantic_auto_apply":  false,
+    "status":  "BLOCKED",
+    "model":  "qwen3:4b",
+    "timestamp_utc":  "2026-09-15T03:55:53.2499364+00:00",
+    "endpoint":  "http://127.0.0.1:11435",
+    "cases_run":  0
+}

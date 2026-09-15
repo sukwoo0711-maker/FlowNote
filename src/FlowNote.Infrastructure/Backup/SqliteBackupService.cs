@@ -30,7 +30,7 @@ public sealed class SqliteBackupService
         CopyDirectory(_database.Paths.AttachmentsDirectory, Path.Combine(destinationDirectory, "attachments"));
         File.WriteAllText(
             Path.Combine(destinationDirectory, "backup-history.json"),
-            $"{{\"created_at_utc\":\"{DateTimeOffset.UtcNow:o}\",\"includes_next_action\":true}}");
+            $"{{\"created_at_utc\":\"{DateTimeOffset.UtcNow:o}\",\"includes_next_action\":true,\"includes_assist_derived\":true}}");
     }
 
     public void RestoreFrom(string sourceDirectory, string destinationRoot)

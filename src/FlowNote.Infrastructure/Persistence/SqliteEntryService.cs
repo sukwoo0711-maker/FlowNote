@@ -19,17 +19,20 @@ public sealed class SqliteEntryService : IEntryService
     private readonly IClock _clock;
     private readonly DisplayTimeZone _displayTimeZone;
     private readonly AttachmentPipeline _attachments;
+    private readonly SqliteAssistStore _assist;
 
     public SqliteEntryService(
         SqliteDatabaseExecutor executor,
         IClock clock,
         DisplayTimeZone displayTimeZone,
-        AttachmentPipeline attachments)
+        AttachmentPipeline attachments,
+        SqliteAssistStore assist)
     {
         _executor = executor;
         _clock = clock;
         _displayTimeZone = displayTimeZone;
         _attachments = attachments;
+        _assist = assist;
     }
 
     public Task<TimelineEntry> SaveNoteAsync(SaveNoteRequest request, CancellationToken cancellationToken = default)
@@ -81,6 +84,7 @@ public sealed class SqliteEntryService : IEntryService
                 AttachmentPipeline.Insert(connection, transaction, entry.Id, prepared);
             }
 
+            _assist.OnNoteSaved(connection, transaction, entry);
             return entry;
         });
         return Task.FromResult(saved);
@@ -186,8 +190,10 @@ public sealed class SqliteEntryService : IEntryService
                 throw new FlowNote.Core.Errors.ValidationException("기록 연결을 바꾸지 못했습니다.");
             }
 
-            return FindById(connection, transaction, current.Id)
+            var relinked = FindById(connection, transaction, current.Id)
                 ?? throw new InvalidOperationException("연결을 바꾼 기록을 다시 읽지 못했습니다.");
+            _assist.OnNoteRelinked(connection, transaction, relinked);
+            return relinked;
         });
         return Task.FromResult(saved);
     }
@@ -222,8 +228,10 @@ public sealed class SqliteEntryService : IEntryService
             update.Parameters.AddWithValue("$updated", UtcInstant.ToStorage(now));
             update.Parameters.AddWithValue("$id", current.Id);
             update.ExecuteNonQuery();
-            return FindById(connection, transaction, current.Id)
+            var updated = FindById(connection, transaction, current.Id)
                 ?? throw new InvalidOperationException("수정한 기록을 다시 읽지 못했습니다.");
+            _assist.OnNoteUpdated(connection, transaction, updated);
+            return updated;
         });
         return Task.FromResult(saved);
     }
@@ -252,6 +260,7 @@ public sealed class SqliteEntryService : IEntryService
             update.Parameters.AddWithValue("$deleted", UtcInstant.ToStorage(now));
             update.Parameters.AddWithValue("$id", current.Id);
             update.ExecuteNonQuery();
+            _assist.OnNoteDeleted(connection, transaction, current.Id);
             return FindById(connection, transaction, current.Id)
                 ?? throw new InvalidOperationException("삭제한 기록을 다시 읽지 못했습니다.");
         });

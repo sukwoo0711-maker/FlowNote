@@ -1,0 +1,21 @@
+{
+  "layer": "PERFORMANCE",
+  "status": "PARTIAL",
+  "measured_at_utc": "2026-09-15T03:56:00Z",
+  "notes": "Only existing smoke capsule metrics on this PC. Assist worker/Ollama/GPU were not measured because the model path is BLOCKED.",
+  "smoke_capsule": {
+    "capsuleDip": "520x52",
+    "windowDip": "536x68",
+    "dpiScale": 1,
+    "warm_show_p95_ms": 9,
+    "warm_show_n": 12,
+    "source": "artifacts/smoke-output/capsule-metrics.txt"
+  },
+  "not_run": [
+    "AnalysisWorker WorkingSet/PrivateBytes",
+    "Ollama process CPU/GPU",
+    "main window WorkingSet with minimap",
+    "150% OS scale",
+    "cold vs warm model latency"
+  ]
+}

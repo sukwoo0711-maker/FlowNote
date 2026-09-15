@@ -1,0 +1,56 @@
+{
+  "fixture_version": 1,
+  "synthetic": true,
+  "display_timezone": "Asia/Seoul",
+  "initial_workitems": [],
+  "initial_threads": [],
+  "events": [
+    {
+      "entry_id": "note-01",
+      "recorded_at": "2026-09-15T09:00:00+09:00",
+      "occurred_at": "2026-09-15T09:00:00+09:00",
+      "source": "user_note",
+      "note_text": "인버터 전원을 켜면 과전류가 발생한다. 초기 구동 로그를 확인 중이다.",
+      "manual_thread_id": null,
+      "attachments": []
+    },
+    {
+      "entry_id": "note-02",
+      "recorded_at": "2026-09-15T09:20:00+09:00",
+      "occurred_at": "2026-09-15T09:20:00+09:00",
+      "source": "user_note",
+      "note_text": "세탁 코스 사양 검토 요청이 왔다. 이건 나중에 확인하자.",
+      "manual_thread_id": null,
+      "attachments": []
+    },
+    {
+      "entry_id": "note-03",
+      "recorded_at": "2026-09-15T09:45:00+09:00",
+      "occurred_at": "2026-09-15T09:45:00+09:00",
+      "source": "user_note",
+      "note_text": "기동 전류가 튀는 조건을 좁혔다. 게이트 드라이버 초기 순서를 점검했다.",
+      "manual_thread_id": null,
+      "attachments": [
+        "../attachments/sample-capture.png"
+      ]
+    },
+    {
+      "entry_id": "note-04",
+      "recorded_at": "2026-09-15T10:10:00+09:00",
+      "occurred_at": "2026-09-15T10:10:00+09:00",
+      "source": "user_note",
+      "note_text": "인버터 초기화 순서를 바꾼 뒤 과전류가 재현되지 않았다. 이 검토는 끝냈다.",
+      "manual_thread_id": null,
+      "attachments": []
+    },
+    {
+      "entry_id": "note-05",
+      "recorded_at": "2026-09-15T10:15:00+09:00",
+      "occurred_at": "2026-09-15T10:15:00+09:00",
+      "source": "user_note",
+      "note_text": "아까 받은 세탁 코스 표를 펼쳤다. 헹굼 단계 요구사항을 비교하고 있다.",
+      "manual_thread_id": null,
+      "attachments": []
+    }
+  ]
+}

@@ -19,7 +19,7 @@ public sealed class MigrationAndAccessTests
         var failing = new SchemaMigrator(executor,
         [
             new Migration(1, SchemaSql.Initial),
-            new Migration(3, "THIS IS NOT VALID SQL ???")
+            new Migration(4, "THIS IS NOT VALID SQL ???")
         ]);
 
         var wrapped = Assert.Throws<DatabaseUnavailableException>(() => failing.Apply());

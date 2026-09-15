@@ -1,0 +1,70 @@
+{
+  "fixture_version": 1,
+  "synthetic": true,
+  "thread_aliases": {
+    "A": {
+      "created_from": "note-01"
+    },
+    "B": {
+      "created_from": "note-02"
+    }
+  },
+  "assignments": [
+    {
+      "entry_id": "note-01",
+      "thread_alias": "A",
+      "role": "PERFORMED"
+    },
+    {
+      "entry_id": "note-02",
+      "thread_alias": "B",
+      "role": "REQUEST_LATER"
+    },
+    {
+      "entry_id": "note-03",
+      "thread_alias": "A",
+      "role": "PERFORMED"
+    },
+    {
+      "entry_id": "note-04",
+      "thread_alias": "A",
+      "role": "COMPLETION_MENTION"
+    },
+    {
+      "entry_id": "note-05",
+      "thread_alias": "B",
+      "role": "PERFORMED"
+    }
+  ],
+  "episodes": [
+    {
+      "thread_alias": "A",
+      "observed_entry_ids": [
+        "note-01",
+        "note-03",
+        "note-04"
+      ]
+    },
+    {
+      "thread_alias": "B",
+      "observed_entry_ids": [
+        "note-05"
+      ]
+    }
+  ],
+  "request_markers": [
+    {
+      "entry_id": "note-02",
+      "thread_alias": "B",
+      "does_not_interrupt": "A"
+    }
+  ],
+  "official_workitem_count": 0,
+  "official_completion_events": 0,
+  "duration_minutes": null,
+  "mandatory_labels_or_start_pause_resume_clicks": 0,
+  "notes": [
+    "thread alias is only a test identifier; runtime IDs must be generated normally.",
+    "Two A observations have a 45-minute gap: mark observation gap, not lunch/break; do not split A merely for request B."
+  ]
+}

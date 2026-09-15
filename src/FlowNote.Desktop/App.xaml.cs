@@ -1,13 +1,17 @@
 ﻿using System.Drawing;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using System.Windows.Threading;
+using FlowNote.Core.Assist;
 using FlowNote.Core.Time;
 using FlowNote.Desktop.Preview;
 using FlowNote.Desktop.Smoke;
 using FlowNote.Desktop.ViewModels;
 using FlowNote.Desktop.Views;
 using FlowNote.Infrastructure;
+using FlowNote.Infrastructure.Assist;
 using FlowNote.Infrastructure.Demo;
 using FlowNote.Infrastructure.Paths;
 using Forms = System.Windows.Forms;
@@ -24,10 +28,13 @@ public partial class App : System.Windows.Application
     private bool _exiting;
     private bool _smoke;
     private bool _trayHintShown;
+    private AnalysisWorker? _worker;
+    private CancellationTokenSource? _assistCts;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        var rawArgs = e.Args ?? [];
         DispatcherUnhandledException += (_, args) =>
         {
             TryWriteCrash("dispatcher", args.Exception);
@@ -37,8 +44,8 @@ public partial class App : System.Windows.Application
             TryWriteCrash("domain", args.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, args) =>
             TryWriteCrash("task", args.Exception);
-        var args = StartupArgs.Parse(e.Args);
-        _smoke = args.Smoke;
+        var args = StartupArgs.Parse(rawArgs);
+        _smoke = args.Smoke || args.AssistSmoke;
         if (args.UiPreview)
         {
             ShutdownMode = ShutdownMode.OnMainWindowClose;
@@ -82,26 +89,41 @@ public partial class App : System.Windows.Application
 
             return;
         }
-        var mutexName = args.Smoke
+        var mutexName = args.AssistSmoke
+            ? @"Local\FlowNote.Desktop.AssistSmoke"
+            : args.Smoke
             ? @"Local\FlowNote.Desktop.Smoke"
             : args.Demo ? @"Local\FlowNote.Desktop.Demo" : @"Local\FlowNote.Desktop.Live";
+        if (!string.IsNullOrWhiteSpace(args.DataRoot))
+        {
+            var hex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(args.DataRoot))))
+                .ToLowerInvariant()[..12];
+            mutexName += ".d" + hex;
+        }
+
         _mutex = new Mutex(true, mutexName, out var created);
         if (!created)
         {
+            if (args.Smoke || args.AssistSmoke)
+            {
+                Shutdown(3);
+                return;
+            }
+
             MessageBox.Show("FlowNote가 이미 실행 중입니다.", "FlowNote");
             Shutdown();
             return;
         }
 
-        var mode = args.Demo || args.Smoke ? AppStorageMode.Demo : AppStorageMode.Live;
-        if (args.Smoke)
+        var mode = args.Demo || args.Smoke || args.AssistSmoke ? AppStorageMode.Demo : AppStorageMode.Live;
+        if (args.Smoke || args.AssistSmoke)
         {
             mode = AppStorageMode.Demo;
         }
 
         var paths = AppStoragePaths.Create(mode, args.DataRoot);
         var timeZone = new DisplayTimeZone(TimeZoneInfo.Local);
-        if (args.Demo && !args.Smoke)
+        if (args.Demo && !args.Smoke && !args.AssistSmoke)
         {
             var seedClock = new AdjustableClock(DateTimeOffset.UtcNow);
             using var seedDb = new FlowNoteDatabase(paths, seedClock, timeZone);
@@ -109,8 +131,25 @@ public partial class App : System.Windows.Application
                 .GetAwaiter().GetResult();
         }
 
+        if ((args.AssistDemo || args.AssistSmoke) && (args.Demo || args.AssistSmoke || !string.IsNullOrWhiteSpace(args.DataRoot)))
+        {
+            var seedClock = new AdjustableClock(DateTimeOffset.UtcNow);
+            using var seedDb = new FlowNoteDatabase(paths, seedClock, timeZone);
+            Task.Run(() => V4AssistDemoSeeder.EnsureAsync(seedDb, value => seedClock.UtcNow = value, ResolveAssistFixtures()))
+                .GetAwaiter().GetResult();
+            if (args.AssistSmoke && !string.IsNullOrWhiteSpace(args.SmokeOut))
+            {
+                Directory.CreateDirectory(args.SmokeOut);
+                File.WriteAllText(Path.Combine(args.SmokeOut, "app-startup.txt"), "seeded");
+            }
+        }
+
         _database = new FlowNoteDatabase(paths, new SystemClock(), timeZone);
         var session = new AppSession(_database);
+        if (!args.AssistSmoke)
+        {
+            StartAssistWorker(session);
+        }
         var mainVm = new MainViewModel(session);
         var floatingVm = new FloatingViewModel(session);
         _main = new MainWindow(mainVm, session);
@@ -191,6 +230,21 @@ public partial class App : System.Windows.Application
                 .GetAwaiter().GetResult();
             session.NotifyDataChanged();
         };
+        mainVm.AssistScopeAckRequested += () =>
+        {
+            var choice = MessageBox.Show(
+                _main,
+                "로컬 보조는 이 PC의 메모 원문과 첨부 파일명만 사용합니다. 외부 AI로 보내지 않으며, 모델이 없으면 규칙 모드로 둡니다.",
+                "로컬 보조",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information);
+            if (choice == MessageBoxResult.OK)
+            {
+                session.Database.Assist.AcknowledgeScope();
+                session.Database.Assist.SetMode(AssistMode.LocalAssist);
+                session.NotifyDataChanged();
+            }
+        };
         _main.Closing += (_, closing) =>
         {
             if (_exiting)
@@ -205,7 +259,30 @@ public partial class App : System.Windows.Application
         SetupTray();
         _main.Show();
         _floating.Show();
-        if (args.Smoke)
+        if (args.AssistSmoke)
+        {
+            var output = args.SmokeOut ?? Path.Combine(AppContext.BaseDirectory, "assist-smoke-output");
+            Dispatcher.BeginInvoke(async () =>
+            {
+                try
+                {
+                    var harness = new AssistSmokeHarness(session, mainVm, floatingVm, _main, _floating, output);
+                    var code = await harness.RunAsync();
+                    _exiting = true;
+                    Shutdown(code);
+                }
+                catch (Exception ex)
+                {
+                    Directory.CreateDirectory(output);
+                    await File.WriteAllTextAsync(
+                        Path.Combine(output, "assist-smoke-result.txt"),
+                        "FAIL\n" + ex.GetType().Name + ": " + ex.Message);
+                    _exiting = true;
+                    Shutdown(1);
+                }
+            }, DispatcherPriority.Normal);
+        }
+        else if (args.Smoke)
         {
             var output = args.SmokeOut ?? Path.Combine(AppContext.BaseDirectory, "smoke-output");
             Dispatcher.BeginInvoke(async () =>
@@ -233,7 +310,7 @@ public partial class App : System.Windows.Application
         try
         {
             var path = Path.Combine(Path.GetTempPath(), "flownote-crash.txt");
-            File.AppendAllText(path, $"{DateTime.Now:O} {kind} {ex?.GetType().FullName}: {ex?.Message}{Environment.NewLine}");
+            File.AppendAllText(path, $"{DateTime.Now:O} {kind} {ex?.GetType().FullName}: {ex?.Message}{Environment.NewLine}{ex?.InnerException}{Environment.NewLine}{ex}{Environment.NewLine}");
         }
         catch (IOException)
         {
@@ -290,6 +367,7 @@ public partial class App : System.Windows.Application
             _tray = null;
         }
 
+        StopAssistWorker();
         _database?.Dispose();
         _database = null;
         _mutex?.ReleaseMutex();
@@ -306,9 +384,54 @@ public partial class App : System.Windows.Application
             _tray.Dispose();
         }
 
+        StopAssistWorker();
         _database?.Dispose();
         _mutex?.Dispose();
         base.OnExit(e);
+    }
+
+    private void StartAssistWorker(AppSession session)
+    {
+        IContextInference inference = UnavailableContextInference.Instance;
+        try
+        {
+            var settings = session.Database.Assist.GetSettings();
+            inference = new OllamaContextInference(settings.OllamaBaseUrl, settings.ModelTag);
+        }
+        catch (Exception)
+        {
+            inference = UnavailableContextInference.Instance;
+        }
+
+        _assistCts = new CancellationTokenSource();
+        _worker = new AnalysisWorker(session.Database, inference, new SystemClock());
+        _worker.Completed += () =>
+        {
+            try
+            {
+                Dispatcher.BeginInvoke(() => session.NotifyDataChanged());
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        };
+        _ = _worker.RunAsync(_assistCts.Token);
+    }
+
+    private void StopAssistWorker()
+    {
+        try
+        {
+            _assistCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        _worker?.Dispose();
+        _worker = null;
+        _assistCts?.Dispose();
+        _assistCts = null;
     }
 
     private static string? ResolveV3Fixtures()
@@ -327,15 +450,40 @@ public partial class App : System.Windows.Application
 
         return null;
     }
+
+    private static string? ResolveAssistFixtures()
+    {
+        var start = new DirectoryInfo(AppContext.BaseDirectory);
+        for (var i = 0; i < 8 && start is not null; i++)
+        {
+            var candidate = Path.Combine(start.FullName, "fixtures", "assist-v4", "scenarios");
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            var pack = Path.Combine(start.FullName, "FlowNote_Local_Assist_V4", "fixtures", "scenarios");
+            if (Directory.Exists(pack))
+            {
+                return pack;
+            }
+
+            start = start.Parent;
+        }
+
+        return null;
+    }
 }
 
-internal sealed record StartupArgs(bool Demo, bool Smoke, bool UiPreview, string? DataRoot, string? SmokeOut)
+internal sealed record StartupArgs(bool Demo, bool Smoke, bool UiPreview, bool AssistDemo, bool AssistSmoke, string? DataRoot, string? SmokeOut)
 {
     public static StartupArgs Parse(IReadOnlyList<string> args)
     {
         var demo = false;
         var smoke = false;
         var uiPreview = false;
+        var assistDemo = false;
+        var assistSmoke = false;
         string? dataRoot = null;
         string? smokeOut = null;
         for (var i = 0; i < args.Count; i++)
@@ -352,6 +500,14 @@ internal sealed record StartupArgs(bool Demo, bool Smoke, bool UiPreview, string
             {
                 uiPreview = true;
             }
+            else if (string.Equals(args[i], "--assist-demo", StringComparison.OrdinalIgnoreCase))
+            {
+                assistDemo = true;
+            }
+            else if (string.Equals(args[i], "--assist-smoke", StringComparison.OrdinalIgnoreCase))
+            {
+                assistSmoke = true;
+            }
             else if (string.Equals(args[i], "--data-root", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Count)
             {
                 dataRoot = args[++i];
@@ -362,6 +518,6 @@ internal sealed record StartupArgs(bool Demo, bool Smoke, bool UiPreview, string
             }
         }
 
-        return new StartupArgs(demo, smoke, uiPreview, dataRoot, smokeOut);
+        return new StartupArgs(demo, smoke, uiPreview, assistDemo, assistSmoke, dataRoot, smokeOut);
     }
 }

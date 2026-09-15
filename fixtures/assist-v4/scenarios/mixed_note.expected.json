@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "entry_id": "mixed-01",
+  "allowed_safe_results": [
+    {
+      "decision": "link",
+      "primary_thread_id": "ctx-inverter",
+      "primary_role": "PERFORMED",
+      "secondary_thread_id": "ctx-course",
+      "secondary_role": "REQUEST_LATER"
+    },
+    {
+      "decision": "abstain"
+    }
+  ],
+  "must_not_start_course_episode": true,
+  "must_not_duplicate_original_entry": true,
+  "comment": "Ambiguous multi-topic safe abstention is allowed; canonical single-topic coverage is assessed separately."
+}

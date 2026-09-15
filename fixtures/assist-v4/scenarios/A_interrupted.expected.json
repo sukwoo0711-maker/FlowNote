@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "assignments": [
+    {
+      "entry_id": "switch-01",
+      "thread_id": "ctx-inverter",
+      "role": "PERFORMED"
+    },
+    {
+      "entry_id": "switch-02",
+      "thread_id": "ctx-course",
+      "role": "PERFORMED"
+    },
+    {
+      "entry_id": "switch-03",
+      "thread_id": "ctx-inverter",
+      "role": "PERFORMED"
+    }
+  ],
+  "episodes": [
+    {
+      "thread_id": "ctx-inverter",
+      "observed_entry_ids": [
+        "switch-01"
+      ]
+    },
+    {
+      "thread_id": "ctx-course",
+      "observed_entry_ids": [
+        "switch-02"
+      ]
+    },
+    {
+      "thread_id": "ctx-inverter",
+      "observed_entry_ids": [
+        "switch-03"
+      ]
+    }
+  ],
+  "duration_minutes": null,
+  "same_identity_for_first_and_third": true,
+  "official_pause_resume_events": 0
+}

@@ -17,7 +17,8 @@ public sealed class FlowNoteDatabase : IDisposable
         Executor = new SqliteDatabaseExecutor(paths.DatabasePath);
         new SchemaMigrator(Executor).Apply();
         Attachments = new AttachmentPipeline(paths, clock);
-        Entries = new SqliteEntryService(Executor, clock, displayTimeZone, Attachments);
+        Assist = new SqliteAssistStore(Executor, clock);
+        Entries = new SqliteEntryService(Executor, clock, displayTimeZone, Attachments, Assist);
         WorkItems = new SqliteWorkItemService(Executor, clock, displayTimeZone);
         Drafts = new SqliteDraftStore(Executor, clock);
         Settings = new SqliteSettingsStore(Executor);
@@ -32,6 +33,8 @@ public sealed class FlowNoteDatabase : IDisposable
     public DisplayTimeZone DisplayTimeZone { get; }
 
     public SqliteDatabaseExecutor Executor { get; }
+
+    public SqliteAssistStore Assist { get; }
 
     public SqliteEntryService Entries { get; }
 

@@ -17,7 +17,8 @@ public sealed class SchemaMigrator
     public static IReadOnlyList<Migration> DefaultMigrations { get; } =
     [
         new Migration(SchemaSql.InitialVersion, SchemaSql.Initial),
-        new Migration(SchemaSql.NextActionVersion, SchemaSql.NextAction)
+        new Migration(SchemaSql.NextActionVersion, SchemaSql.NextAction),
+        new Migration(SchemaSql.AssistVersion, SchemaSql.Assist)
     ];
 
     public int Apply()

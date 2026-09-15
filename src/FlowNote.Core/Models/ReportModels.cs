@@ -34,6 +34,7 @@ public sealed class ReportCandidate
     public required string BodyRevision { get; init; }
     public bool OutOfRange { get; init; }
     public IReadOnlyList<ReportFileCandidate> Files { get; init; } = [];
+    public string? AssistProvenance { get; init; }
 }
 
 public sealed class ReportBuildRequest
@@ -57,6 +58,7 @@ public sealed class ReportSnapshotEntry
     public string? WorkTitle { get; init; }
     public bool OutOfRange { get; init; }
     public string Section { get; init; } = "";
+    public string? AssistProvenance { get; init; }
 }
 
 public sealed class ReportSnapshotFile

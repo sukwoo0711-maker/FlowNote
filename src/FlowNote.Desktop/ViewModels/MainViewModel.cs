@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
+using FlowNote.Core.Assist;
 using FlowNote.Core.Models;
 using FlowNote.Core.Rules;
 using FlowNote.Desktop.Commands;
@@ -75,6 +76,37 @@ public sealed class MainViewModel : INotifyPropertyChanged
         });
         LinkDetailWorkCommand = new RelayCommand(() => LinkWorkRequested?.Invoke(Session.SelectedEntryId));
         MarkNextActionFromDetailCommand = new AsyncRelayCommand(MarkNextActionFromDetailAsync);
+        SetAssistOffCommand = new RelayCommand(() =>
+        {
+            Session.Database.Assist.SetMode(AssistMode.Off);
+            Session.NotifyDataChanged();
+        });
+        SetAssistRulesCommand = new RelayCommand(() =>
+        {
+            Session.Database.Assist.SetMode(AssistMode.RulesOnly);
+            Session.NotifyDataChanged();
+        });
+        SetAssistLocalCommand = new RelayCommand(() =>
+        {
+            if (!Session.Database.Assist.ScopeAcknowledged())
+            {
+                AssistScopeAckRequested?.Invoke();
+                return;
+            }
+
+            Session.Database.Assist.SetMode(AssistMode.LocalAssist);
+            Session.NotifyDataChanged();
+        });
+        ClearAssistCommand = new RelayCommand(ClearAssist);
+        NewAssistThreadCommand = new RelayCommand(NewAssistThread);
+        AssignAssistThreadCommand = new RelayCommandParam(parameter =>
+        {
+            if (parameter is ContextThread thread)
+            {
+                AssignAssist(thread.Id);
+            }
+        });
+        UndoAssistCommand = new RelayCommand(UndoAssist);
         session.DataChanged += Reload;
         session.PropertyChanged += (_, args) =>
         {
@@ -205,6 +237,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string SettingsMode => Session.IsDemo ? "데모 저장소" : "이 PC의 일반 저장소";
 
+    public string AssistModeText { get; private set; } = "규칙만";
+
+    public string AssistModelText { get; private set; } = "외부 AI 없음 · 기본은 규칙 모드";
+
+    public string MinimapLegend { get; private set; } = "기록 기반 연결 · 실작업시간 아님";
+
+    public ObservableCollection<MinimapLane> MinimapLanes { get; } = [];
+
+    public string AssistDetailText { get; private set; } = "";
+
+    public bool ShowAssistDetail => !string.IsNullOrWhiteSpace(AssistDetailText);
+
+    public ObservableCollection<ContextThread> AssistThreadChoices { get; } = [];
+
     public bool IsNavRail { get; private set; }
 
     public string EmptyPrimary => "아직 기록이 없습니다";
@@ -259,6 +305,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand OpenWorkBadgeCommand { get; }
     public ICommand LinkDetailWorkCommand { get; }
     public ICommand MarkNextActionFromDetailCommand { get; }
+    public ICommand SetAssistOffCommand { get; }
+    public ICommand SetAssistRulesCommand { get; }
+    public ICommand SetAssistLocalCommand { get; }
+    public ICommand ClearAssistCommand { get; }
+    public ICommand NewAssistThreadCommand { get; }
+    public ICommand AssignAssistThreadCommand { get; }
+    public ICommand UndoAssistCommand { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -269,6 +322,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public event Action? FocusCapsuleRequested;
 
     public event Action<string?>? LinkWorkRequested;
+
+    public event Action? AssistScopeAckRequested;
 
     public void SetNarrow(bool isNarrow)
     {
@@ -311,6 +366,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             DetailTimes = "";
             DetailAttachments = "";
             DetailImagePath = null;
+            AssistDetailText = "";
         }
         else
         {
@@ -320,6 +376,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             DetailTimes = row.TimeDetail;
             DetailAttachments = row.AttachmentSummary;
             DetailImagePath = row.ImagePath;
+            AssistDetailText = row.AssistDetailText;
+            ReloadAssistChoices();
         }
 
         Raise(nameof(HasDetail));
@@ -332,6 +390,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Raise(nameof(DetailTimes));
         Raise(nameof(DetailAttachments));
         Raise(nameof(DetailImagePath));
+        Raise(nameof(AssistDetailText));
+        Raise(nameof(ShowAssistDetail));
     }
 
     public void CloseDetail()
@@ -345,6 +405,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         var entries = Session.Database.Entries.ListForLocalDateAsync(Session.SelectedDate).GetAwaiter().GetResult();
         var summary = Session.Summarize(entries);
         SummaryText = $"기록 {summary.EntryCount}개 · 완료 업무 {summary.CompletedWorkItemCount}개 · 첨부 {summary.AttachmentCount}개";
+        var assignments = Session.Database.Assist.ListAssignments(entries.Select(static item => item.Id).ToList());
+        var threadIds = assignments.Values.Where(static item => item.ThreadId is not null).Select(static item => item.ThreadId!);
+        var threads = Session.Database.Assist.ListThreadsById(threadIds);
+        ReloadMinimap(entries, assignments, threads);
+        ReloadAssistSettings();
         Rows.Clear();
         if (Session.ViewMode != TimelineViewMode.Panorama)
         {
@@ -377,7 +442,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
                     }
                 }
 
-                Rows.Add(TimelineRow.From(entry, Session));
+                assignments.TryGetValue(entry.Id, out var assignment);
+                var job = Session.Database.Assist.LatestJob(entry.Id);
+                ContextThread? thread = null;
+                if (assignment?.ThreadId is not null)
+                {
+                    threads.TryGetValue(assignment.ThreadId, out thread);
+                }
+
+                Rows.Add(TimelineRow.From(entry, Session, assignment, thread, job));
             }
         }
 
@@ -719,6 +792,156 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Raise(nameof(ShowNextActionEditor));
     }
 
+    private void ReloadMinimap(
+        IReadOnlyList<TimelineEntry> entries,
+        IReadOnlyDictionary<string, EntryContextAssignment> assignments,
+        IReadOnlyDictionary<string, ContextThread> threads)
+    {
+        var projection = DayFlowProjector.Project(entries, assignments, threads);
+        MinimapLegend = projection.Legend;
+        MinimapLanes.Clear();
+        var byId = entries.ToDictionary(static item => item.Id, StringComparer.Ordinal);
+        var zone = Session.Database.DisplayTimeZone.TimeZone;
+        var laneIds = new List<string>();
+        foreach (var episode in projection.Episodes)
+        {
+            if (!laneIds.Contains(episode.ThreadId, StringComparer.Ordinal))
+            {
+                laneIds.Add(episode.ThreadId);
+            }
+        }
+
+        foreach (var request in projection.RequestMarkers)
+        {
+            if (!laneIds.Contains(request.ThreadId, StringComparer.Ordinal))
+            {
+                laneIds.Add(request.ThreadId);
+            }
+        }
+
+        foreach (var threadId in laneIds)
+        {
+            if (!threads.TryGetValue(threadId, out var thread))
+            {
+                continue;
+            }
+
+            var nodes = new List<MinimapNode>();
+            foreach (var episode in projection.Episodes.Where(item => item.ThreadId == threadId))
+            {
+                foreach (var id in episode.ObservedEntryIds)
+                {
+                    if (!byId.TryGetValue(id, out var entry))
+                    {
+                        continue;
+                    }
+
+                    var role = assignments.TryGetValue(id, out var assignment) ? assignment.Role : ContextRole.Unknown;
+                    var completion = role == ContextRole.CompletionMention;
+                    nodes.Add(new MinimapNode
+                    {
+                        Text = TimeZoneInfo.ConvertTime(entry.OccurredAtUtc, zone).ToString("HH:mm"),
+                        Marker = completion ? "◇" : "●",
+                        Kind = completion ? "completion" : "observed"
+                    });
+                }
+
+                if (episode.HasObservationGap)
+                {
+                    nodes.Add(new MinimapNode { Text = "관측 공백", Marker = "···", Kind = "gap" });
+                }
+            }
+
+            foreach (var request in projection.RequestMarkers.Where(item => item.ThreadId == threadId))
+            {
+                if (!byId.TryGetValue(request.EntryId, out var entry))
+                {
+                    continue;
+                }
+
+                nodes.Add(new MinimapNode
+                {
+                    Text = TimeZoneInfo.ConvertTime(entry.OccurredAtUtc, zone).ToString("HH:mm") + " 요청",
+                    Marker = "▽",
+                    Kind = "request"
+                });
+            }
+
+            MinimapLanes.Add(new MinimapLane { Title = thread.Title, Nodes = nodes });
+        }
+
+        Raise(nameof(MinimapLegend));
+    }
+
+    private void ReloadAssistSettings()
+    {
+        var settings = Session.Database.Assist.GetSettings();
+        AssistModeText = settings.Mode switch
+        {
+            AssistMode.Off => "끔",
+            AssistMode.LocalAssist => "로컬 보조",
+            _ => "규칙만"
+        };
+        AssistModelText = settings.Mode == AssistMode.LocalAssist
+            ? $"외부 AI 없음 · {settings.OllamaBaseUrl} · {settings.ModelTag} · 자동 의미 연결 {(settings.SemanticAutoApply ? "켜짐" : "꺼짐")}"
+            : "외부 AI 없음 · 기본은 규칙 모드 · 모델이 없어도 원문 기록은 됩니다";
+        Raise(nameof(AssistModeText));
+        Raise(nameof(AssistModelText));
+    }
+
+    private void ReloadAssistChoices()
+    {
+        AssistThreadChoices.Clear();
+        foreach (var thread in Session.Database.Assist.ListThreads())
+        {
+            AssistThreadChoices.Add(thread);
+        }
+    }
+
+    private void ClearAssist()
+    {
+        if (Session.SelectedEntryId is null)
+        {
+            return;
+        }
+
+        Session.Database.Assist.CorrectAssignment(Session.SelectedEntryId, Guid.NewGuid().ToString("D"), null, false, null);
+        Session.NotifyDataChanged();
+    }
+
+    private void NewAssistThread()
+    {
+        if (Session.SelectedEntryId is null)
+        {
+            return;
+        }
+
+        Session.Database.Assist.CorrectAssignment(Session.SelectedEntryId, Guid.NewGuid().ToString("D"), null, true, null);
+        Session.NotifyDataChanged();
+    }
+
+    private void AssignAssist(string threadId)
+    {
+        if (Session.SelectedEntryId is null)
+        {
+            return;
+        }
+
+        Session.Database.Assist.CorrectAssignment(Session.SelectedEntryId, Guid.NewGuid().ToString("D"), threadId, false, null);
+        Session.NotifyDataChanged();
+    }
+
+    private void UndoAssist()
+    {
+        if (Session.SelectedEntryId is null)
+        {
+            return;
+        }
+
+        Session.Database.Assist.UndoCorrection(Session.SelectedEntryId, Guid.NewGuid().ToString("D"));
+        Session.NotifyDataChanged();
+    }
+
     private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
@@ -757,6 +980,12 @@ public sealed class TimelineRow
 
     public bool ShowOverflow => !string.IsNullOrWhiteSpace(OverflowText);
 
+    public string AssistBadgeText { get; init; } = "";
+
+    public bool ShowAssistBadge => !string.IsNullOrWhiteSpace(AssistBadgeText);
+
+    public string AssistDetailText { get; init; } = "";
+
     public string DisplayPreview => NoteDisplayRules.DisplayPreview(Title, Preview);
 
     public bool ShowPreview => !string.IsNullOrWhiteSpace(DisplayPreview);
@@ -780,7 +1009,12 @@ public sealed class TimelineRow
         IsGroup = true
     };
 
-    public static TimelineRow From(TimelineEntry entry, AppSession session)
+    public static TimelineRow From(
+        TimelineEntry entry,
+        AppSession session,
+        EntryContextAssignment? assignment = null,
+        ContextThread? thread = null,
+        AnalysisJob? job = null)
     {
         var local = TimeZoneInfo.ConvertTime(entry.OccurredAtUtc, session.Database.DisplayTimeZone.TimeZone);
         var recordedLocal = TimeZoneInfo.ConvertTime(entry.RecordedAtUtc, session.Database.DisplayTimeZone.TimeZone);
@@ -851,8 +1085,40 @@ public sealed class TimelineRow
             WorkBadgeText = badge,
             HeroImagePath = hero?.Path,
             FileTiles = tiles,
-            OverflowText = overflow > 0 ? $"+{overflow}" : ""
+            OverflowText = overflow > 0 ? $"+{overflow}" : "",
+            AssistBadgeText = AssistBadge(assignment, thread, job),
+            AssistDetailText = AssistDetail(assignment, thread, job)
         };
+    }
+
+    private static string AssistBadge(EntryContextAssignment? assignment, ContextThread? thread, AnalysisJob? job)
+    {
+        if (assignment is { Resolution: AssignmentResolution.Assigned, ThreadId: not null })
+        {
+            var title = thread?.Title ?? "묶음";
+            return $"{AssistCodec.RoleLabel(assignment.Role)} · {title}";
+        }
+
+        if (job is { Status: AnalysisJobStatus.Pending or AnalysisJobStatus.Running or AnalysisJobStatus.RetryWait })
+        {
+            return "분석 대기";
+        }
+
+        if (job is { Status: AnalysisJobStatus.Blocked or AnalysisJobStatus.Failed })
+        {
+            return "분석 실패";
+        }
+
+        return assignment is { Resolution: AssignmentResolution.ManualClear } ? "연결 해제" : "미분류";
+    }
+
+    private static string AssistDetail(EntryContextAssignment? assignment, ContextThread? thread, AnalysisJob? job)
+    {
+        var badge = AssistBadge(assignment, thread, job);
+        var origin = assignment is null ? "규칙 미적용" : AssistCodec.OriginLabel(assignment.Origin);
+        var quote = string.IsNullOrWhiteSpace(assignment?.SourceQuote) ? "" : " · \"" + assignment.SourceQuote + "\"";
+        var jobText = job is null ? "" : " · " + AssistCodec.JobStatus(job.Status);
+        return origin + " · " + badge + quote + jobText;
     }
 
     private static string TrimPreview(string body)
@@ -869,4 +1135,20 @@ public enum MainPage
     Flow,
     Todos,
     Settings
+}
+
+public sealed class MinimapLane
+{
+    public required string Title { get; init; }
+
+    public required IReadOnlyList<MinimapNode> Nodes { get; init; }
+}
+
+public sealed class MinimapNode
+{
+    public required string Text { get; init; }
+
+    public required string Kind { get; init; }
+
+    public required string Marker { get; init; }
 }

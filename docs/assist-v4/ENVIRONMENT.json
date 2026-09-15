@@ -1,0 +1,71 @@
+{
+    "report_kind":  "ENVIRONMENT_METADATA_ONLY",
+    "generated_at_utc":  "2026-09-15T03:43:27.2175503Z",
+    "repo_root":  "C:\\GitRepositories\\FlowNote",
+    "read_only_except_report":  true,
+    "windows":  true,
+    "powershell_version":  "5.1.26100.9168",
+    "project_metadata_files":  [
+                                   "C:\\GitRepositories\\FlowNote\\FlowNote.sln",
+                                   "C:\\GitRepositories\\FlowNote\\global.json",
+                                   "C:\\GitRepositories\\FlowNote\\src\\FlowNote.Core\\FlowNote.Core.csproj",
+                                   "C:\\GitRepositories\\FlowNote\\src\\FlowNote.Desktop\\FlowNote.Desktop.csproj",
+                                   "C:\\GitRepositories\\FlowNote\\src\\FlowNote.Infrastructure\\FlowNote.Infrastructure.csproj",
+                                   "C:\\GitRepositories\\FlowNote\\tests\\FlowNote.Core.Tests\\FlowNote.Core.Tests.csproj",
+                                   "C:\\GitRepositories\\FlowNote\\tests\\FlowNote.Infrastructure.Tests\\FlowNote.Infrastructure.Tests.csproj"
+                               ],
+    "git":  {
+                "found":  true,
+                "path":  "C:\\Program Files\\Git\\cmd\\git.exe",
+                "exit_code":  0,
+                "output":  "?? FlowNote_Local_Assist_V4/\r\n?? FlowNote_Local_Assist_V4_Implementation_Pack.zip"
+            },
+    "dotnet":  {
+                   "found":  true,
+                   "path":  "C:\\Program Files\\dotnet\\dotnet.exe",
+                   "exit_code":  0,
+                   "output":  ".NET SDK:\r\n Version:           10.0.401\r\n Commit:            e34a38d2ae\r\n Workload version:  10.0.400-manifests.63b36e85\r\n MSBuild version:   18.9.11+e34a38d2a\r\n\r\n?고????섍꼍:\r\n OS Name:     Windows\r\n OS Version:  10.0.26200\r\n OS Platform: Windows\r\n RID:         win-x64\r\n Base Path:   C:\\Program Files\\dotnet\\sdk\\10.0.401\\\r\n\r\n?ㅼ튂??.NET ?뚰겕濡쒕뱶:\r\n?쒖떆???ㅼ튂???뚰겕濡쒕뱶媛 ?놁뒿?덈떎.\r\n??留ㅻ땲?섏뒪?몃? ?ㅼ튂????use workload sets ?ъ슜?섎룄濡?援ъ꽦?⑸땲??\r\n?뚰겕濡쒕뱶 吏묓빀???ㅼ튂?섏뼱 ?덉? ?딆뒿?덈떎. \"dotnet workload restore\"瑜??ㅽ뻾?섏뿬 ?뚰겕濡쒕뱶 吏묓빀???ㅼ튂?섏꽭??\r\n\r\nHost:\r\n  Version:      10.0.12\r\n  Architecture: x64\r\n  Commit:       95017c711e\r\n\r\n.NET SDKs installed:\r\n  10.0.401 [C:\\Program Files\\dotnet\\sdk]\r\n\r\n.NET runtimes installed:\r\n  Microsoft.AspNetCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\r\n  Microsoft.NETCore.App 10.0.11 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\r\n  Microsoft.NETCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\r\n  Microsoft.WindowsDesktop.App 10.0.11 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\r\n  Microsoft.WindowsDesktop.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\r\n\r\nOther architectures found:\r\n  x86   [C:\\Program Files (x86)\\dotnet]\r\n    registered at [HKLM\\SOFTWARE\\dotnet\\Setup\\InstalledVersions\\x86\\InstallLocation]\r\n\r\nEnvironment variables:\r\n  DOTNET_CLI_TELEMETRY_OPTOUT              [1]\r\n\r\nglobal.json file:\r\n  C:\\GitRepositories\\FlowNote\\global.json\r\n\r\nLearn more:\r\n  https://aka.ms/dotnet/info\r\n\r\nDownload .NET:\r\n  https://aka.ms/dotnet/download"
+               },
+    "ollama":  {
+                   "found":  false
+               },
+    "hardware":  {
+                     "os":  {
+                                "Caption":  "Microsoft Windows 11 Home",
+                                "Version":  "10.0.26200",
+                                "BuildNumber":  "26200",
+                                "OSArchitecture":  "64비트"
+                            },
+                     "memory":  {
+                                    "TotalPhysicalMemory":  66145669120
+                                },
+                     "cpu":  [
+                                 {
+                                     "Name":  "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+                                     "NumberOfCores":  8,
+                                     "NumberOfLogicalProcessors":  16
+                                 }
+                             ],
+                     "gpu":  [
+                                 {
+                                     "Name":  "NVIDIA GeForce RTX 5080",
+                                     "DriverVersion":  "32.0.15.7688"
+                                 },
+                                 {
+                                     "Name":  "Easy\u0026Light Display HUB Virtual Display",
+                                     "DriverVersion":  "4.6.5.0"
+                                 },
+                                 {
+                                     "Name":  "AMD Radeon(TM) Graphics",
+                                     "DriverVersion":  "32.0.21030.2001"
+                                 }
+                             ]
+                 },
+    "listeners":  null,
+    "manual_checks":  [
+                          "Actual DPI and multi-monitor layout",
+                          "Policy approval for model install/download",
+                          "Live/demo/test data paths",
+                          "Windows GUI execution access"
+                      ]
+}
