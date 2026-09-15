@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using FlowNote.Core.Rules;
+using FlowNote.Desktop.Paste;
 using FlowNote.Desktop.ViewModels;
 
 namespace FlowNote.Desktop.Controls;
@@ -28,7 +29,7 @@ public partial class CapsuleInputBar : UserControl
 
     public event EventHandler? LogoMenuRequested;
 
-    public event EventHandler? PasteImageRequested;
+    public event EventHandler<IDataObject>? RichPasteRequested;
 
     private FloatingViewModel? Vm => DataContext as FloatingViewModel;
 
@@ -78,14 +79,8 @@ public partial class CapsuleInputBar : UserControl
             return;
         }
 
-        if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+        if (ClipboardSnapshot.IsPasteGesture(e))
         {
-            if (Clipboard.ContainsImage())
-            {
-                e.Handled = true;
-                PasteImageRequested?.Invoke(this, EventArgs.Empty);
-            }
-
             return;
         }
 
@@ -139,10 +134,11 @@ public partial class CapsuleInputBar : UserControl
 
     private void OnMemoPasting(object sender, DataObjectPastingEventArgs e)
     {
-        if (e.DataObject.GetDataPresent(DataFormats.Bitmap) || e.DataObject.GetDataPresent(DataFormats.Dib))
+        var plan = ClipboardSnapshot.TryPlan(e.DataObject, DateTime.Now.ToString("HHmmss"));
+        if (plan?.ConsumesPaste == true)
         {
             e.CancelCommand();
-            PasteImageRequested?.Invoke(this, EventArgs.Empty);
+            RichPasteRequested?.Invoke(this, e.DataObject);
             return;
         }
 

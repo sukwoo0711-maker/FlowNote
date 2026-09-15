@@ -92,6 +92,8 @@ public sealed class InferenceRequest
     public required string EntryRevision { get; init; }
     public required int CorrectionRevision { get; init; }
     public required int PolicyRevision { get; init; }
+
+    public string? ContinuationThreadId { get; init; }
 }
 
 public sealed class InferencePrimary

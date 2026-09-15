@@ -6,11 +6,12 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using FlowNote.Core.Clipboard;
 using FlowNote.Core.Models;
 using FlowNote.Core.Rules;
 using FlowNote.Desktop.Capture;
+using FlowNote.Desktop.Paste;
 using FlowNote.Desktop.ViewModels;
 using Microsoft.Win32;
 
@@ -69,12 +70,21 @@ public partial class FloatingCapsuleWindow : Window
         _viewModel.StorageRequested += () =>
             MessageBox.Show(this, _session.Database.Paths.Root, "저장 위치");
         _viewModel.PickWorkRequested += PickWork;
-        _viewModel.FocusInputRequested += () =>
+        _viewModel.FocusInputRequested += FocusMemoFromUser;
+    }
+
+    public void FocusMemoFromUser()
+    {
+        Show();
+        Activate();
+        var hwnd = new WindowInteropHelper(this).EnsureHandle();
+        Native.SetForegroundWindow(hwnd);
+        Dispatcher.BeginInvoke(() =>
         {
-            Show();
-            Activate();
             InputBar.MemoBox.Focus();
-        };
+            Keyboard.Focus(InputBar.MemoBox);
+            InputBar.MemoBox.CaretIndex = InputBar.MemoBox.Text.Length;
+        }, DispatcherPriority.Input);
     }
 
     public FrameworkElement CapsuleSurface => CapsuleChrome;
@@ -262,16 +272,17 @@ public partial class FloatingCapsuleWindow : Window
 
     private void OnDeactivated(object? sender, EventArgs e)
     {
-        if (_capturing || _viewModel.IsIdle == false || LogoMenu.IsOpen)
-        {
-            return;
-        }
-
-        _viewModel.CloseTransientPanel();
+        // 기억판은 다른 앱을 눌러도 유지한다. 갱신으로 Activate 하지 않는다.
     }
 
     private void OnWindowPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (ClipboardSnapshot.IsPasteGesture(e) && TryImportPaste())
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key != Key.Escape)
         {
             return;
@@ -284,18 +295,28 @@ public partial class FloatingCapsuleWindow : Window
             return;
         }
 
-        if (_viewModel.ShowAuxiliaryPanel)
+        if (_viewModel.ShowPeek)
+        {
+            _viewModel.ClosePeekCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.ShowRecentPanel || _viewModel.ShowTodoPanel)
+        {
+            _viewModel.CollapseBoardCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.ShowDraftPanel)
         {
             _viewModel.SetPanel(CapsulePanelKind.None);
             e.Handled = true;
         }
     }
 
-    private async void OnPasteImage(object? sender, EventArgs e)
-    {
-        await Dispatcher.Yield(DispatcherPriority.Input);
-        TryPasteImage();
-    }
+    private void OnRichPaste(object? sender, IDataObject data) => TryImportPaste(data);
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
@@ -415,39 +436,92 @@ public partial class FloatingCapsuleWindow : Window
         }
     }
 
-    private bool TryPasteImage()
+    public bool TryImportPaste(IDataObject? data = null)
     {
-        if (!_viewModel.IsIdle || !Clipboard.ContainsImage())
+        if (!_viewModel.IsIdle)
         {
             return false;
         }
 
-        var image = Clipboard.GetImage();
-        if (image is null)
+        IDataObject? payload = data;
+        if (payload is null)
+        {
+            try
+            {
+                payload = System.Windows.Clipboard.GetDataObject();
+            }
+            catch (COMException)
+            {
+                _viewModel.SetError("클립보드를 읽지 못했습니다. 입력은 그대로 둡니다.");
+                return true;
+            }
+        }
+
+        ClipboardImportPlan? plan;
+        try
+        {
+            plan = ClipboardSnapshot.TryPlan(payload, DateTime.Now.ToString("HHmmss"));
+        }
+        catch (COMException)
+        {
+            _viewModel.SetError("클립보드를 읽지 못했습니다. 입력은 그대로 둡니다.");
+            return true;
+        }
+
+        if (plan is null || !plan.ConsumesPaste)
         {
             return false;
         }
 
-        var staging = Path.Combine(Path.GetTempPath(), "FlowNotePaste", Guid.NewGuid().ToString("N") + ".png");
-        Directory.CreateDirectory(Path.GetDirectoryName(staging)!);
-        using (var stream = File.Create(staging))
-        {
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(image));
-            encoder.Save(stream);
-        }
-
-        _viewModel.AddPending(new PendingAttachment
-        {
-            OriginalName = $"paste-{DateTime.Now:HHmmss}.png",
-            SourcePath = staging,
-            MediaType = "image/png"
-        });
+        ApplyPlan(plan);
         return true;
+    }
+
+    private void ApplyPlan(ClipboardImportPlan plan)
+    {
+        if (plan.ExistingFilePaths.Count > 0)
+        {
+            AddFiles(plan.ExistingFilePaths);
+        }
+
+        foreach (var part in plan.Attachments)
+        {
+            if (part.Bytes.Length == 0)
+            {
+                continue;
+            }
+
+            var path = Path.Combine(
+                _session.Database.Paths.StagingDirectory,
+                "paste-" + Guid.NewGuid().ToString("N") + Path.GetExtension(part.FileName));
+            File.WriteAllBytes(path, part.Bytes);
+            _viewModel.AddPending(new PendingAttachment
+            {
+                OriginalName = part.FileName,
+                SourcePath = path,
+                MediaType = part.MediaType
+            });
+        }
+
+        if (string.IsNullOrEmpty(plan.InsertText))
+        {
+            return;
+        }
+
+        _viewModel.Body = string.IsNullOrEmpty(_viewModel.Body)
+            ? plan.InsertText
+            : _viewModel.Body + Environment.NewLine + plan.InsertText;
+        _viewModel.NotifyPossibleMultilinePaste();
     }
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr handle, out NativeRect rect);
+
+    private static class Native
+    {
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr handle);
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect

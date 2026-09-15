@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using FlowNote.Desktop.Theming;
 using FlowNote.Desktop.ViewModels;
 
 namespace FlowNote.Desktop;
@@ -20,11 +21,13 @@ public partial class MainWindow : Window
         {
             ApplyDetailLayout();
             ApplyViewModeButtons();
+            ApplyNavButtons();
         };
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
+        GlassChrome.Attach(this);
         var workArea = SystemParameters.WorkArea;
         if (Width > workArea.Width)
         {
@@ -66,6 +69,13 @@ public partial class MainWindow : Window
         {
             ApplyViewModeButtons();
         }
+
+        if (e.PropertyName is nameof(MainViewModel.IsFlow)
+            or nameof(MainViewModel.IsTodosPage)
+            or nameof(MainViewModel.IsSettingsPage))
+        {
+            ApplyNavButtons();
+        }
     }
 
     private void OnTimelineSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -84,7 +94,7 @@ public partial class MainWindow : Window
 
         if (NavColumn is not null)
         {
-            NavColumn.Width = _viewModel.IsNavRail ? new GridLength(56) : new GridLength(168);
+            NavColumn.Width = _viewModel.IsNavRail ? new GridLength(68) : new GridLength(220);
         }
 
         DetailColumn.Width = _viewModel.ShowDetailColumn ? new GridLength(352) : new GridLength(0);
@@ -135,5 +145,33 @@ public partial class MainWindow : Window
         button.Style = on
             ? (Style)FindResource("ViewModeButtonOn")
             : (Style)FindResource("ViewModeButton");
+    }
+
+    private void ApplyNavButtons()
+    {
+        if (FlowNavButton is null)
+        {
+            return;
+        }
+
+        FlowNavButton.Style = (Style)FindResource(_viewModel.IsFlow ? "NavButtonOn" : "NavButton");
+        TodosNavButton.Style = (Style)FindResource(_viewModel.IsTodosPage ? "NavButtonOn" : "NavButton");
+        SettingsNavButton.Style = (Style)FindResource(_viewModel.IsSettingsPage ? "NavButtonOn" : "NavButton");
+    }
+
+    private void OnMinimize(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void OnMaximize(object sender, RoutedEventArgs e)
+        => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void OnCaptionClose(object sender, RoutedEventArgs e) => Close();
+
+    private void OnStateChanged(object? sender, EventArgs e)
+    {
+        Padding = WindowState == WindowState.Maximized ? new Thickness(8) : new Thickness(0);
+        if (MaxCaption is not null)
+        {
+            MaxCaption.ToolTip = WindowState == WindowState.Maximized ? "이전 크기로" : "최대화";
+        }
     }
 }

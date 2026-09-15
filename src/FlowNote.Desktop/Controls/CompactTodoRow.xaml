@@ -24,7 +24,7 @@
         </Button>
         <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="0"
                 HorizontalContentAlignment="Left" Click="OnOpen"
-                AutomationProperties.Name="업무 열기">
+                AutomationProperties.Name="할 일 고정">
             <TextBlock Text="{Binding Title}" FontSize="12"
                        Foreground="#FFF2F6F8" TextTrimming="CharacterEllipsis"
                        VerticalAlignment="Center"/>

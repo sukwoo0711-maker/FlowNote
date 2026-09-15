@@ -3,7 +3,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using FlowNote.Core.Models;
 using FlowNote.Core.Rules;
+using FlowNote.Desktop.Paste;
 using FlowNote.Desktop.ViewModels;
+using FlowNote.Desktop.Views;
 
 namespace FlowNote.Desktop.Controls;
 
@@ -91,6 +93,20 @@ public partial class FloatingAuxiliaryPanel : UserControl
         if (Vm?.AddWorkItemCommand.CanExecute(null) == true)
         {
             Vm.AddWorkItemCommand.Execute(null);
+        }
+    }
+
+    private void OnLongMemoPasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (ClipboardSnapshot.TryPlan(e.DataObject, DateTime.Now.ToString("HHmmss"))?.ConsumesPaste != true)
+        {
+            return;
+        }
+
+        e.CancelCommand();
+        if (Window.GetWindow(this) is FloatingCapsuleWindow window)
+        {
+            window.TryImportPaste(e.DataObject);
         }
     }
 

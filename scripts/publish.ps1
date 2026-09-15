@@ -38,8 +38,19 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed: $LASTEXITCODE" }
 Get-ChildItem -Path $out -Recurse -Include createdump.exe,*.pdb |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
-if ($FlowNotePublishProfile -ne "SecurityPc") {
+if ($FlowNotePublishProfile -ne "SecurityPc" -and $FlowNotePublishProfile -ne "Core") {
     $fixtureDest = Join-Path $out "fixtures\v3"
     New-Item -ItemType Directory -Force -Path $fixtureDest | Out-Null
     Copy-Item -Force (Join-Path $root "fixtures\v3\*") $fixtureDest
+}
+
+if ($FlowNotePublishProfile -eq "Core") {
+    foreach ($extra in @("fixtures", "ai-runtime", "ai-models")) {
+        $path = Join-Path $out $extra
+        if (Test-Path $path) { Remove-Item -Recurse -Force $path }
+    }
+    Get-ChildItem -Path $out -Recurse -Include llama-server.exe,llama-server-impl.dll,*.gguf,ggml-rpc-server.exe |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+    Copy-Item -Force (Join-Path $root "packaging\CORE.txt") (Join-Path $out "CORE.txt")
+    Copy-Item -Force (Join-Path $root "packaging\PORTABLE-CORE.txt") (Join-Path $out "PORTABLE.txt")
 }

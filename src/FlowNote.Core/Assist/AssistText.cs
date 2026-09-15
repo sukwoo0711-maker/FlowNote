@@ -19,6 +19,13 @@ public static class AssistText
         return t is "확인" or "완료" or "테스트" or "작업" or "메모" or "그거" or "진행" or "첨부" or "자료" or "로그";
     }
 
+    public static bool IsFollowUpToken(string token)
+        => token is "확인" or "완료" or "테스트" or "작업" or "메모" or "그거" or "진행"
+            or "첨부" or "자료" or "로그" or "초기화" or "순서" or "재현" or "조건"
+            or "변경" or "점검" or "출력" or "비교" or "재시작" or "재시도" or "원인"
+            or "결과" or "상태" or "설정" or "측정" or "추가" or "다시" or "후속"
+            or "시작" or "검토" or "중" or "하나" or "더";
+
     public static bool IsExactSubstring(string source, string? quote)
     {
         if (string.IsNullOrEmpty(quote))
@@ -27,6 +34,89 @@ public static class AssistText
         }
 
         return source.Contains(quote, StringComparison.Ordinal);
+    }
+
+    public static bool LooksDeferred(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return text.Contains("나중에", StringComparison.Ordinal)
+            || (text.Contains("요청", StringComparison.Ordinal)
+                && (text.Contains("들어", StringComparison.Ordinal)
+                    || text.Contains("보기", StringComparison.Ordinal)
+                    || text.Contains("부탁", StringComparison.Ordinal)));
+    }
+
+    public static IReadOnlyList<string> TopicTokens(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var tokens = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var raw in Tokenize(text))
+        {
+            if (IsGenericTopic(raw) || raw.Length < 2 || !seen.Add(raw))
+            {
+                continue;
+            }
+
+            tokens.Add(raw);
+        }
+
+        return tokens;
+    }
+
+    public static string? TopicQuote(string text)
+    {
+        var tokens = TopicTokens(text);
+        if (tokens.Count == 0)
+        {
+            return null;
+        }
+
+        if (tokens.Count >= 2)
+        {
+            var pair = tokens[0] + " " + tokens[1];
+            if (text.Contains(pair, StringComparison.Ordinal) && !IsGenericTopic(pair))
+            {
+                return pair.Length <= AssistVersions.TopicQuoteMax ? pair : tokens[0];
+            }
+        }
+
+        return tokens[0];
+    }
+
+    public static IReadOnlyList<string> AliasSeeds(string text)
+        => TopicTokens(text).Where(static item => item.Length >= 3).ToList();
+
+    private static IEnumerable<string> Tokenize(string text)
+    {
+        var buffer = new System.Text.StringBuilder();
+        foreach (var ch in text)
+        {
+            if (char.IsLetterOrDigit(ch) || ch is >= '가' and <= '힣')
+            {
+                buffer.Append(ch);
+                continue;
+            }
+
+            if (buffer.Length > 0)
+            {
+                yield return buffer.ToString();
+                buffer.Clear();
+            }
+        }
+
+        if (buffer.Length > 0)
+        {
+            yield return buffer.ToString();
+        }
     }
 
     public static IReadOnlyList<string> IssueKeys(string text)

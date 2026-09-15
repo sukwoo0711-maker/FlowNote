@@ -10,8 +10,10 @@ Windows에서 한 줄·사진 기록, 선택 업무 연결, 다음 행동, 완�
 
 | 파일 | 용도 |
 |---|---|
-| `FlowNote-0.4.0-win-x64-setup.exe` | 현재 사용자 폴더에 설치, 시작 메뉴·제거 프로그램 등록 |
-| `FlowNote-0.4.0-win-x64-portable.zip` | 압축을 풀고 `FlowNote.Desktop.exe` 실행. 설치 마법사 없음 |
+| `FlowNote-0.4.0-win-x64-core-setup.exe` | **경량 핵심.** 모델·엔진 없음. 현재 사용자 폴더에 설치 |
+| `FlowNote-0.4.0-win-x64-core.zip` | **경량 핵심.** 압축을 풀고 `FlowNote.Desktop.exe` 실행 |
+| `FlowNote-0.4.0-win-x64-setup.exe` | 엔진·모델이 있는 설치본 |
+| `FlowNote-0.4.0-win-x64-portable.zip` | 엔진·모델이 있는 포터블 |
 
 .NET 별도 설치는 필요 없습니다. 기록은 `%LOCALAPPDATA%\FlowNote\live`에 남습니다. 설치를 지워도 이 폴더는 지우지 않습니다.
 
@@ -30,6 +32,12 @@ powershell -NoProfile -File scripts/publish.ps1
 
 ```powershell
 powershell -NoProfile -File scripts/package.ps1
+```
+
+경량 핵심(모델·엔진 없음):
+
+```powershell
+powershell -NoProfile -File scripts/package-core.ps1
 ```
 
 자세한 사용법은 `docs/USAGE.md`입니다.

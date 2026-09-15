@@ -45,6 +45,16 @@ public partial class CompactLogRow : UserControl
             ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF75D5B0")!)
             : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFD1E0E7")!);
 
+        if (!string.IsNullOrWhiteSpace(row.FileName) && string.IsNullOrWhiteSpace(row.ImagePath))
+        {
+            FileLabel.Text = row.FileName;
+            FileLabel.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            FileLabel.Visibility = Visibility.Collapsed;
+        }
+
         var image = CapsuleImageLoader.TryLoad(row.ImagePath, 48);
         if (image is null)
         {

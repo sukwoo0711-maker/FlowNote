@@ -22,6 +22,9 @@ public sealed class AppSession : INotifyPropertyChanged
         PinFloating = database.Settings.Get("floating.topmost") != "false";
         ShowOnboarding = database.Settings.Get("onboarding.seen") != "true";
         PinnedPreview = ParsePinnedPreview(database.Settings.Get("floating.pinnedPreview"));
+        BoardCollapsed = database.Settings.Get("floating.boardCollapsed") == "true";
+        PinnedBoardKind = database.Settings.Get("floating.pinKind") ?? "";
+        PinnedBoardId = database.Settings.Get("floating.pinId") ?? "";
         database.Settings.Set("floating.layoutVersion", CapsuleLayout.LayoutVersion.ToString(CultureInfo.InvariantCulture));
     }
 
@@ -42,6 +45,15 @@ public sealed class AppSession : INotifyPropertyChanged
     public bool PinFloating { get; private set; }
 
     public FloatingPinnedPreview PinnedPreview { get; private set; }
+
+    public bool BoardCollapsed { get; private set; }
+
+    public string PinnedBoardKind { get; private set; } = "";
+
+    public string PinnedBoardId { get; private set; } = "";
+
+    public bool HasBoardPin => !string.IsNullOrWhiteSpace(PinnedBoardId)
+        && (PinnedBoardKind is "note" or "todo");
 
     public bool ShowOnboarding { get; private set; }
 
@@ -100,6 +112,31 @@ public sealed class AppSession : INotifyPropertyChanged
         Database.Settings.Set("floating.pinnedPreview", value.ToString().ToLowerInvariant());
         Raise(nameof(PinnedPreview));
     }
+
+    public void SetBoardCollapsed(bool value)
+    {
+        if (BoardCollapsed == value)
+        {
+            return;
+        }
+
+        BoardCollapsed = value;
+        Database.Settings.Set("floating.boardCollapsed", value ? "true" : "false");
+        Raise(nameof(BoardCollapsed));
+    }
+
+    public void SetBoardPin(string kind, string id)
+    {
+        PinnedBoardKind = kind;
+        PinnedBoardId = id;
+        Database.Settings.Set("floating.pinKind", kind);
+        Database.Settings.Set("floating.pinId", id);
+        Raise(nameof(PinnedBoardKind));
+        Raise(nameof(PinnedBoardId));
+        Raise(nameof(HasBoardPin));
+    }
+
+    public void ClearBoardPin() => SetBoardPin("", "");
 
     public void SaveFloatingPosition(double left, double top)
     {

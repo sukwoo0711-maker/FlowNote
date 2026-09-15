@@ -1,0 +1,13 @@
+layoutVersion=2
+windowStyle=None
+resizeMode=NoResize
+allowsTransparency=True
+showInTaskbar=False
+capsuleDip=520x52
+windowDip=536x68
+osBoundsPx=536x68 at 2880,24
+dpiScaleX=1
+dpiScaleY=1
+pixelsPerDip=1
+panelKind=None
+topmost=True

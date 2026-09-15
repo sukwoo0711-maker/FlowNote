@@ -29,4 +29,27 @@ public sealed class RecentPreviewSelectorTests
             static x => x.Seq);
         Assert.Empty(picked);
     }
+
+    [Fact]
+    public void Newest_first_puts_just_saved_on_top()
+    {
+        var items = new (DateTimeOffset At, long Seq, string Id)[]
+        {
+            (new DateTimeOffset(2026, 9, 14, 9, 0, 0, TimeSpan.Zero), 1, "old"),
+            (new DateTimeOffset(2026, 9, 15, 8, 0, 0, TimeSpan.Zero), 2, "mid"),
+            (new DateTimeOffset(2026, 9, 15, 9, 0, 0, TimeSpan.Zero), 3, "new")
+        };
+
+        var picked = RecentPreviewSelector.TakeLatestNewestFirst(items, static x => x.At, static x => x.Seq);
+        Assert.Equal(new[] { "new", "mid", "old" }, picked.Select(static x => x.Id).ToArray());
+    }
+
+    [Fact]
+    public void Board_keeps_notes_and_completions_only()
+    {
+        Assert.True(RecentPreviewSelector.IsBoardEntry("note"));
+        Assert.True(RecentPreviewSelector.IsBoardEntry("task_completed"));
+        Assert.False(RecentPreviewSelector.IsBoardEntry("task_created"));
+        Assert.False(RecentPreviewSelector.IsBoardEntry("task_reopened"));
+    }
 }

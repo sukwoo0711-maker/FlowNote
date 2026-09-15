@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
@@ -13,6 +12,8 @@ using FlowNote.Desktop.Views;
 using FlowNote.Infrastructure;
 using FlowNote.Infrastructure.Assist;
 using FlowNote.Infrastructure.Demo;
+using FlowNote.Desktop.Input;
+using FlowNote.Desktop.Theming;
 using FlowNote.Infrastructure.Paths;
 using Forms = System.Windows.Forms;
 
@@ -31,6 +32,7 @@ public partial class App : System.Windows.Application
     private AnalysisWorker? _worker;
     private CancellationTokenSource? _assistCts;
     private FlowNote.Infrastructure.Assist.Embedded.EmbeddedEngineManager? _engine;
+    private GlobalHotKey? _hotKey;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -170,7 +172,8 @@ public partial class App : System.Windows.Application
         var session = new AppSession(_database);
         if (!args.AssistSmoke)
         {
-            StartAssistWorker(session);
+            ApplyCoreProductScope(session);
+            EnsureAssistWorker(session);
         }
         var mainVm = new MainViewModel(session);
         var floatingVm = new FloatingViewModel(session);
@@ -201,11 +204,7 @@ public partial class App : System.Windows.Application
             _main?.Show();
             _main?.Activate();
         };
-        mainVm.FocusCapsuleRequested += () =>
-        {
-            _floating?.Show();
-            _floating?.Activate();
-        };
+        mainVm.FocusCapsuleRequested += () => _floating?.FocusMemoFromUser();
         mainVm.ContinueRecordingRequested += id =>
         {
             var decision = floatingVm.PrepareContinue(id);
@@ -229,8 +228,7 @@ public partial class App : System.Windows.Application
                 floatingVm.ContinueRecording(id, relinkExistingDraft: true);
             }
 
-            _floating?.Show();
-            _floating?.Activate();
+            _floating?.FocusMemoFromUser();
         };
         mainVm.DayReportRequested += filter =>
         {
@@ -264,9 +262,11 @@ public partial class App : System.Windows.Application
             {
                 session.Database.Assist.AcknowledgeScope();
                 session.Database.Assist.SetMode(AssistMode.LocalAssist);
+                EnsureAssistWorker(session);
                 session.NotifyDataChanged();
             }
         };
+        mainVm.AssistEngineRequested += () => EnsureAssistWorker(session);
         mainVm.ImportModelRequested += () =>
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
@@ -306,6 +306,11 @@ public partial class App : System.Windows.Application
         SetupTray();
         _main.Show();
         _floating.Show();
+        if (!_smoke)
+        {
+            _hotKey = new GlobalHotKey(() => _floating?.FocusMemoFromUser());
+            mainVm.SetCaptureHotkeyStatus(_hotKey.CaptureRegistered);
+        }
         if (args.AssistSmoke)
         {
             var output = args.SmokeOut ?? Path.Combine(AppContext.BaseDirectory, "assist-smoke-output");
@@ -362,7 +367,13 @@ public partial class App : System.Windows.Application
                 "logs");
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, "crash.txt");
-            File.AppendAllText(path, $"{DateTime.Now:O} {kind} {ex?.GetType().FullName}{Environment.NewLine}");
+            var detail = ex?.GetType().FullName;
+            if (ex is System.Windows.Markup.XamlParseException && ex.InnerException is not null)
+            {
+                detail += " " + ex.InnerException.GetType().Name;
+            }
+
+            File.AppendAllText(path, $"{DateTime.Now:O} {kind} {detail}{Environment.NewLine}");
         }
         catch (IOException)
         {
@@ -374,19 +385,18 @@ public partial class App : System.Windows.Application
         _tray = new Forms.NotifyIcon
         {
             Visible = true,
-            Text = "FlowNote",
-            Icon = SystemIcons.Application
+            Text = "FlowNote · " + GlobalHotKey.CaptureLabel,
+            Icon = BrandIcon.LoadTrayIcon()
         };
         var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add("기록 창 (" + GlobalHotKey.CaptureLabel + ")", null, (_, _) =>
+        {
+            _floating?.FocusMemoFromUser();
+        });
         menu.Items.Add("오늘 보기", null, (_, _) =>
         {
             _main?.Show();
             _main?.Activate();
-        });
-        menu.Items.Add("기록 창", null, (_, _) =>
-        {
-            _floating?.Show();
-            _floating?.Activate();
         });
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("앱 종료", null, (_, _) => ExitApp());
@@ -419,6 +429,7 @@ public partial class App : System.Windows.Application
             _tray = null;
         }
 
+        DisposeHotKey();
         StopAssistWorker();
         _database?.Dispose();
         _database = null;
@@ -436,25 +447,78 @@ public partial class App : System.Windows.Application
             _tray.Dispose();
         }
 
+        DisposeHotKey();
         StopAssistWorker();
         _database?.Dispose();
         _mutex?.Dispose();
         base.OnExit(e);
     }
 
-    private void StartAssistWorker(AppSession session)
+    private void DisposeHotKey()
     {
-        var verifier = new FlowNote.Infrastructure.Assist.Embedded.AssetVerifier(AppContext.BaseDirectory, session.Database.Paths);
-        var engine = new FlowNote.Infrastructure.Assist.Embedded.EmbeddedEngineManager(verifier, session.Database.Paths);
-        _engine = engine;
-        session.Engine = engine;
-        var check = verifier.Check();
-        if (check.Fingerprint is not null)
+        _hotKey?.Dispose();
+        _hotKey = null;
+    }
+
+    private static void ApplyCoreProductScope(AppSession session)
+    {
+        if (session.Database.Settings.Get("product.coreBoard") != "v1")
         {
-            session.Database.Assist.SetLockedDigest(check.Fingerprint);
+            session.Database.Settings.Set("product.coreBoard", "v1");
         }
 
-        IContextInference inference = new FlowNote.Infrastructure.Assist.Embedded.ManagedLlamaInference(engine);
+        if (session.Database.Settings.Get("product.coreFlow") != "v2")
+        {
+            session.Database.Settings.Set("product.coreFlow", "v2");
+            if (session.Database.Assist.GetSettings().Mode == AssistMode.Off)
+            {
+                session.Database.Assist.SetMode(AssistMode.RulesOnly);
+            }
+        }
+    }
+
+    private void EnsureAssistWorker(AppSession session)
+    {
+        var mode = session.Database.Assist.GetSettings().Mode;
+        if (mode == AssistMode.Off)
+        {
+            StopAssistWorker();
+            return;
+        }
+
+        var wantsEngine = mode == AssistMode.LocalAssist;
+        if (_worker is not null && wantsEngine == (session.Engine is not null))
+        {
+            return;
+        }
+
+        StopAssistWorker();
+        StartAssistWorker(session, wantsEngine);
+    }
+
+    private void StartAssistWorker(AppSession session, bool startEngine)
+    {
+        IContextInference inference;
+        if (startEngine)
+        {
+            var verifier = new FlowNote.Infrastructure.Assist.Embedded.AssetVerifier(AppContext.BaseDirectory, session.Database.Paths);
+            var engine = new FlowNote.Infrastructure.Assist.Embedded.EmbeddedEngineManager(verifier, session.Database.Paths);
+            _engine = engine;
+            session.Engine = engine;
+            var check = verifier.Check();
+            if (check.Fingerprint is not null)
+            {
+                session.Database.Assist.SetLockedDigest(check.Fingerprint);
+            }
+
+            inference = new FlowNote.Infrastructure.Assist.Embedded.ManagedLlamaInference(engine);
+        }
+        else
+        {
+            session.Engine = null;
+            inference = UnavailableContextInference.Instance;
+        }
+
         _assistCts = new CancellationTokenSource();
         _worker = new AnalysisWorker(session.Database, inference, new SystemClock());
         _worker.Completed += () =>

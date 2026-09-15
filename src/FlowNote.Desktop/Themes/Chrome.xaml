@@ -1,0 +1,55 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="CaptionCloseBrush" Color="#FF5F57"/>
+    <SolidColorBrush x:Key="CaptionMinBrush" Color="#FEBC2E"/>
+    <SolidColorBrush x:Key="CaptionMaxBrush" Color="#28C840"/>
+    <SolidColorBrush x:Key="TitleBarFillBrush" Color="#66FFFFFF"/>
+
+    <LinearGradientBrush x:Key="ShellWashBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#73F7F4EE" Offset="0"/>
+        <GradientStop Color="#3DD4B896" Offset="0.55"/>
+        <GradientStop Color="#4CEDE8E1" Offset="1"/>
+    </LinearGradientBrush>
+
+    <Style x:Key="CaptionButton" TargetType="Button">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="48"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Hit" Background="Transparent">
+                        <Ellipse x:Name="Dot" Width="12" Height="12"
+                                 Fill="{TemplateBinding Foreground}"
+                                 Stroke="#33FFFFFF" StrokeThickness="0.6"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Hit" Property="Background" Value="#14000000"/>
+                            <Setter TargetName="Dot" Property="Opacity" Value="0.86"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Dot" Property="Opacity" Value="0.7"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="CaptionCloseButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+        <Setter Property="Foreground" Value="{StaticResource CaptionCloseBrush}"/>
+        <Setter Property="ToolTip" Value="닫기"/>
+    </Style>
+    <Style x:Key="CaptionMinButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+        <Setter Property="Foreground" Value="{StaticResource CaptionMinBrush}"/>
+        <Setter Property="ToolTip" Value="최소화"/>
+    </Style>
+    <Style x:Key="CaptionMaxButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+        <Setter Property="Foreground" Value="{StaticResource CaptionMaxBrush}"/>
+        <Setter Property="ToolTip" Value="최대화"/>
+    </Style>
+</ResourceDictionary>

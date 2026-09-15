@@ -78,7 +78,7 @@ public sealed class AssistPersistenceTests
         var assignment = temp.Database.Assist.GetAssignment(unlocked.Id);
         Assert.NotNull(assignment);
         Assert.Equal(AssignmentResolution.Assigned, assignment!.Resolution);
-        Assert.Equal(ContextRole.Unknown, assignment.Role);
+        Assert.Equal(ContextRole.Performed, assignment.Role);
         Assert.Equal(AssignmentOrigin.Rule, assignment.Origin);
         var locked = temp.Database.Assist.GetAssignment(
             (await temp.Database.Entries.ListForLocalDateAsync(new DateOnly(2026, 9, 14)))
@@ -154,6 +154,75 @@ public sealed class AssistPersistenceTests
         Assert.Single(projection.Episodes[1].ObservedEntryIds);
         Assert.Single(projection.RequestMarkers);
         Assert.Empty(await temp.Database.WorkItems.ListByStatusAsync(WorkItemStatus.Open));
+    }
+
+    [Fact]
+    public async Task Unlabeled_day_notes_form_ab_return_without_work_labels()
+    {
+        using var temp = new TempDatabase();
+        temp.Database.Assist.SetMode(AssistMode.RulesOnly);
+        DateTimeOffset At(int hour, int minute) => new(2026, 9, 14, hour, minute, 0, TimeSpan.FromHours(9));
+        await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = "prior-board",
+            Body = "보드 전원 시퀀스를 확인했다",
+            OccurredAtUtc = At(8, 20)
+        });
+        var script = new (string RequestId, int Hour, int Minute, string Body)[]
+        {
+            ("ab-1", 9, 0, "인버터 과전류 확인 중"),
+            ("ab-2", 9, 20, "코스표 검토 요청 들어옴. 나중에 보기"),
+            ("ab-3", 9, 45, "초기화 순서 확인"),
+            ("ab-4", 10, 10, "순서 변경 후 재현 안 됨"),
+            ("ab-5", 10, 15, "아까 받은 코스표 검토 시작"),
+            ("ab-6", 11, 0, "인버터 조건 하나 더 확인"),
+            ("ab-x", 11, 30, "확인")
+        };
+        foreach (var note in script)
+        {
+            await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+            {
+                RequestId = note.RequestId,
+                Body = note.Body,
+                OccurredAtUtc = At(note.Hour, note.Minute)
+            });
+        }
+
+        using var worker = new AnalysisWorker(temp.Database, UnavailableContextInference.Instance, temp.Clock);
+        await worker.DrainAsync(20);
+
+        var entries = (await temp.Database.Entries.ListForLocalDateAsync(new DateOnly(2026, 9, 14)))
+            .Where(static item => item.Kind == EntryKind.Note)
+            .ToDictionary(static item => item.RequestId, StringComparer.Ordinal);
+        var assignments = temp.Database.Assist.ListAssignments(entries.Values.Select(static item => item.Id).ToList());
+        var threadIds = assignments.Values.Where(static item => item.ThreadId is not null).Select(static item => item.ThreadId!);
+        var threads = temp.Database.Assist.ListThreadsById(threadIds);
+        var projection = DayFlowProjector.Project(entries.Values.ToList(), assignments, threads);
+
+        Assert.Equal(4, projection.Episodes.Count);
+        Assert.Equal(entries["prior-board"].Id, Assert.Single(projection.Episodes[0].ObservedEntryIds));
+        Assert.NotEqual(projection.Episodes[0].ThreadId, projection.Episodes[1].ThreadId);
+        Assert.Equal(projection.Episodes[1].ThreadId, projection.Episodes[3].ThreadId);
+        Assert.NotEqual(projection.Episodes[1].ThreadId, projection.Episodes[2].ThreadId);
+        Assert.Equal(
+            [entries["ab-1"].Id, entries["ab-3"].Id, entries["ab-4"].Id],
+            projection.Episodes[1].ObservedEntryIds);
+        Assert.Equal([entries["ab-5"].Id], projection.Episodes[2].ObservedEntryIds);
+        Assert.Equal([entries["ab-6"].Id], projection.Episodes[3].ObservedEntryIds);
+        Assert.Equal(entries["ab-2"].Id, Assert.Single(projection.RequestMarkers).EntryId);
+        Assert.Equal(ContextRole.RequestLater, assignments[entries["ab-2"].Id].Role);
+        Assert.Equal(ContextRole.Performed, assignments[entries["ab-4"].Id].Role);
+        Assert.Contains(entries["ab-x"].Id, projection.UnclassifiedEntryIds);
+        Assert.DoesNotContain(entries.Values, static item => item.WorkItemId is not null);
+        Assert.DoesNotContain(
+            await temp.Database.Entries.ListForLocalDateAsync(new DateOnly(2026, 9, 14)),
+            static item => item.Kind == EntryKind.TaskCompleted);
+
+        temp.Database.Assist.CorrectAssignment(entries["ab-3"].Id, Guid.NewGuid().ToString("D"), null, false, null);
+        await worker.DrainAsync(8);
+        var cleared = temp.Database.Assist.GetAssignment(entries["ab-3"].Id);
+        Assert.True(cleared is { Resolution: AssignmentResolution.ManualClear, UserLocked: true });
+        Assert.Null(cleared.ThreadId);
     }
 
     private static string FindRepoRoot()

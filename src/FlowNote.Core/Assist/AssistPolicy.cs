@@ -29,14 +29,9 @@ public static class AssistPolicy
             return false;
         }
 
-        if (settings.Mode == AssistMode.RulesOnly && result.Decision == AssistDecision.New)
-        {
-            return false;
-        }
-
         if (settings.Mode == AssistMode.LocalAssist && result.Decision != AssistDecision.Abstain && !settings.SemanticAutoApply && !result.IsFake)
         {
-            return result.Decision == AssistDecision.Link && result.Primary?.Role == ContextRole.Unknown;
+            return result.Decision == AssistDecision.Link;
         }
 
         return true;

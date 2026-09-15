@@ -58,6 +58,15 @@ Copy-Item -Force (Join-Path $smokeOut "08-main*.png") $u2 -ErrorAction SilentlyC
 Copy-Item -Force (Join-Path $smokeOut "09-main*.png") $u2 -ErrorAction SilentlyContinue
 Copy-Item -Force (Join-Path $smokeOut "10-main*.png") $u2 -ErrorAction SilentlyContinue
 Copy-Item -Force (Join-Path $smokeOut "11-main*.png") $u2 -ErrorAction SilentlyContinue
+Copy-Item -Force (Join-Path $smokeOut "12-panorama*.png") $u2 -ErrorAction SilentlyContinue
+Copy-Item -Force (Join-Path $smokeOut "13-panorama*.png") $u2 -ErrorAction SilentlyContinue
+Copy-Item -Force (Join-Path $smokeOut "14-panorama*.png") $u2 -ErrorAction SilentlyContinue
+$core = Join-Path $root "docs\screenshots\core"
+New-Item -ItemType Directory -Force -Path $core | Out-Null
+Copy-Item -Force (Join-Path $smokeOut "12-panorama*.png") $core -ErrorAction SilentlyContinue
+Copy-Item -Force (Join-Path $smokeOut "13-panorama*.png") $core -ErrorAction SilentlyContinue
+Copy-Item -Force (Join-Path $smokeOut "14-panorama*.png") $core -ErrorAction SilentlyContinue
+Copy-Item -Force (Join-Path $smokeOut "09-main-panorama.png") $core -ErrorAction SilentlyContinue
 Copy-Item -Force (Join-Path $smokeOut "smoke-result.txt") (Join-Path $root "docs\screenshots\smoke-result.txt")
 $v3 = Join-Path $root "docs\screenshots\v3"
 New-Item -ItemType Directory -Force -Path $v3 | Out-Null

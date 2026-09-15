@@ -4,10 +4,9 @@
              xmlns:controls="clr-namespace:FlowNote.Desktop.Controls"
              AutomationProperties.Name="타임라인 기록 카드">
     <controls:TimelineItemShell TimeLabel="{Binding TimeLabel}" NodeKind="note" Margin="0,0,0,12">
-        <Border Padding="12" Background="{StaticResource SurfaceBrush}" CornerRadius="12"
-                BorderBrush="{StaticResource BorderBrushToken}" BorderThickness="1">
+        <Border Padding="14">
             <Border.Style>
-                <Style TargetType="Border">
+                <Style TargetType="Border" BasedOn="{StaticResource RaisedGlass}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
                             <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>

@@ -266,15 +266,18 @@ public sealed class SqliteAssistStore
             using var select = connection.CreateCommand();
             select.Transaction = transaction;
             select.CommandText = """
-                SELECT * FROM analysis_jobs
-                WHERE attempts < $max
+                SELECT j.* FROM analysis_jobs j
+                LEFT JOIN entries e ON e.id = j.entry_id
+                WHERE j.attempts < $max
                   AND (
-                    status = 'pending'
-                    OR status = 'retry_wait'
-                    OR (status = 'running' AND lease_until_utc IS NOT NULL AND lease_until_utc < $now)
+                    j.status = 'pending'
+                    OR j.status = 'retry_wait'
+                    OR (j.status = 'running' AND j.lease_until_utc IS NOT NULL AND j.lease_until_utc < $now)
                   )
-                  AND (next_attempt_utc IS NULL OR next_attempt_utc <= $now)
-                ORDER BY created_at_utc ASC
+                  AND (j.next_attempt_utc IS NULL OR j.next_attempt_utc <= $now)
+                ORDER BY COALESCE(e.occurred_at_utc, j.created_at_utc) ASC,
+                         COALESCE(e.seq, 0) ASC,
+                         j.created_at_utc ASC
                 LIMIT 1;
                 """;
             select.Parameters.AddWithValue("$max", AssistVersions.MaxAttempts);
@@ -621,6 +624,14 @@ public sealed class SqliteAssistStore
             CorrectionRevision = current?.CorrectionRevision ?? 0
         });
 
+        if (threadId is not null && resolution == AssignmentResolution.Assigned)
+        {
+            foreach (var alias in AssistText.AliasSeeds(entry.Body).Append(result.Primary?.TopicQuote).OfType<string>())
+            {
+                WriteAlias(connection, transaction, alias, threadId);
+            }
+        }
+
         DeleteMentions(connection, transaction, entry.Id);
         foreach (var mention in result.Mentions)
         {
@@ -865,7 +876,30 @@ public sealed class SqliteAssistStore
         command.Parameters.AddWithValue("$created", now);
         command.Parameters.AddWithValue("$issue", (object?)issueKey ?? DBNull.Value);
         command.ExecuteNonQuery();
+        if (!string.IsNullOrWhiteSpace(title) && title.Length >= 2)
+        {
+            WriteAlias(connection, transaction, title, id);
+        }
+
         return ReadThread(connection, transaction, id) ?? throw new InvalidOperationException("thread insert failed");
+    }
+
+    private static void WriteAlias(SqliteConnection connection, SqliteTransaction transaction, string alias, string threadId)
+    {
+        if (string.IsNullOrWhiteSpace(alias) || alias.Length > AssistVersions.TopicQuoteMax)
+        {
+            return;
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO context_aliases(alias, thread_id) VALUES ($alias, $thread)
+            ON CONFLICT(alias) DO UPDATE SET thread_id = excluded.thread_id;
+            """;
+        command.Parameters.AddWithValue("$alias", alias);
+        command.Parameters.AddWithValue("$thread", threadId);
+        command.ExecuteNonQuery();
     }
 
     private static void WriteAssignment(SqliteConnection connection, SqliteTransaction transaction, EntryContextAssignment assignment)

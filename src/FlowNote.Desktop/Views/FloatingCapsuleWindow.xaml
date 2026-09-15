@@ -16,7 +16,7 @@
         ShowActivated="False"
         WindowStartupLocation="Manual"
         Topmost="True"
-        FontFamily="Malgun Gothic, Segoe UI"
+        FontFamily="Malgun Gothic, Segoe UI Variable Text, Segoe UI"
         Closing="OnClosing"
         Loaded="OnLoaded"
         LocationChanged="OnLocationChanged"
@@ -44,14 +44,18 @@
                     Width="520" Height="52"
                     CornerRadius="26"
                     ClipToBounds="True"
-                    BorderBrush="{StaticResource CapsuleBorderBrush}"
-                    BorderThickness="1"
                     Background="{StaticResource CapsuleSurfaceBrush}"
                     MouseLeftButtonDown="OnCapsuleSurfaceDown">
                 <Grid>
+                    <Border Height="20" VerticalAlignment="Top" CornerRadius="26,26,0,0"
+                            Background="{StaticResource CapsuleSheenBrush}" IsHitTestVisible="False"/>
+                    <Border CornerRadius="26" BorderBrush="{StaticResource CapsuleHighlightBrush}"
+                            BorderThickness="1,1,1,0" Opacity="0.7" IsHitTestVisible="False"/>
+                    <Border CornerRadius="26" BorderBrush="{StaticResource CapsuleBorderBrush}"
+                            BorderThickness="1" IsHitTestVisible="False"/>
                     <controls:CapsuleInputBar x:Name="InputBar"
                                               LogoMenuRequested="OnLogoMenu"
-                                              PasteImageRequested="OnPasteImage"/>
+                                              RichPasteRequested="OnRichPaste"/>
                     <Border Background="#33FFFFFF" CornerRadius="26" IsHitTestVisible="False"
                             Visibility="{Binding IsDraggingFiles, Converter={StaticResource BoolToVis}}"/>
                 </Grid>
@@ -68,7 +72,7 @@
                AllowsTransparency="True">
             <Border Background="{StaticResource CapsulePanelBrush}"
                     BorderBrush="{StaticResource CapsuleBorderBrush}"
-                    BorderThickness="1" CornerRadius="10" Padding="6" MinWidth="180">
+                    BorderThickness="1" CornerRadius="14" Padding="8" MinWidth="196">
                 <StackPanel>
                     <Button Style="{StaticResource CapsuleTextButton}" HorizontalAlignment="Stretch"
                             Content="하루의 흐름" Command="{Binding OpenTodayCommand}" Click="OnMenuCommand"/>

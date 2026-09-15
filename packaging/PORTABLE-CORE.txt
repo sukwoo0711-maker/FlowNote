@@ -1,0 +1,9 @@
+FlowNote 0.4.0 핵심 포터블 (Windows x64)
+
+1. 이 폴더의 FlowNote.Desktop.exe를 실행하세요. 설치가 필요 없습니다.
+2. 기록은 %LOCALAPPDATA%\FlowNote\live 에 남습니다. 실행 파일 옆이 아닙니다.
+3. 끝내려면 트레이 아이콘에서 앱 종료를 고르세요. 창의 X는 트레이로 숨깁니다.
+4. .NET 별도 설치는 필요 없습니다 (self-contained).
+5. 이 묶음에는 AI 엔진과 모델이 없습니다. 기본은 규칙 연결입니다. 클라우드 동기화·원격 AI·자동 업데이트도 없습니다.
+
+제거: 이 폴더를 지우면 됩니다. 사용자 데이터는 %LOCALAPPDATA%\FlowNote 에 남습니다.

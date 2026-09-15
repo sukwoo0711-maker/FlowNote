@@ -3,10 +3,12 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
+using System.Windows.Media;
 using FlowNote.Core.Errors;
 using FlowNote.Core.Models;
 using FlowNote.Core.Rules;
 using FlowNote.Desktop.Commands;
+using FlowNote.Desktop.Controls;
 using FlowNote.Infrastructure.Drafts;
 
 namespace FlowNote.Desktop.ViewModels;
@@ -31,6 +33,9 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
     private string? _draftWorkTitle;
     private string? _draftWorkIssueKey;
     private WorkItemStatus? _draftWorkStatus;
+    private CapsuleRecentRow? _peekRow;
+    private string _pinnedTitle = "";
+    private string _pinnedKindLabel = "";
 
     public FloatingViewModel(AppSession session)
     {
@@ -40,8 +45,15 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         TogglePinCommand = new RelayCommand(() => Session.SetPinFloating(!Session.PinFloating));
         UndoCompleteCommand = new AsyncRelayCommand(UndoCompleteAsync, () => CanUndoComplete);
         OpenTodayCommand = new RelayCommand(RequestToday);
-        ToggleRecentCommand = new RelayCommand(() => TogglePanel(CapsulePanelKind.Recent));
-        ToggleTodoCommand = new RelayCommand(() => TogglePanel(CapsulePanelKind.Todo));
+        ToggleRecentCommand = new RelayCommand(ToggleBoard);
+        ToggleTodoCommand = new RelayCommand(ShowTodosOnBoard);
+        ShowRecentCommand = new RelayCommand(ShowRecentOnBoard);
+        CollapseBoardCommand = new RelayCommand(CollapseBoard);
+        ClosePeekCommand = new RelayCommand(ClosePeek);
+        PinPeekCommand = new RelayCommand(PinPeek);
+        UnpinBoardCommand = new RelayCommand(UnpinBoard);
+        CopyPeekCommand = new RelayCommand(CopyPeek);
+        OpenPeekInDayCommand = new RelayCommand(OpenPeekInDay);
         OpenLongNoteCommand = new RelayCommand(OpenLongNote);
         HideCommand = new RelayCommand(() => HideRequested?.Invoke());
         ExitCommand = new RelayCommand(() => ExitRequested?.Invoke());
@@ -76,24 +88,21 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
                 Raise(nameof(AlwaysOnTopText));
             }
 
-            if (args.PropertyName is nameof(AppSession.PinnedPreview))
+            if (args.PropertyName is nameof(AppSession.PinnedPreview)
+                or nameof(AppSession.BoardCollapsed)
+                or nameof(AppSession.HasBoardPin))
             {
                 Raise(nameof(PinPreviewLabel));
                 Raise(nameof(IsPreviewPinned));
+                Raise(nameof(ShowPinnedItem));
+                Raise(nameof(HasBoardContent));
             }
         };
         PendingFiles.CollectionChanged += OnPendingFilesChanged;
         RestoreDraft();
         ReloadWorkItems();
         ReloadRecent();
-        if (session.PinnedPreview == FloatingPinnedPreview.Todo)
-        {
-            SetPanel(CapsulePanelKind.Todo);
-        }
-        else if (session.PinnedPreview == FloatingPinnedPreview.Recent)
-        {
-            SetPanel(CapsulePanelKind.Recent);
-        }
+        RestoreBoardVisibility();
     }
 
     public AppSession Session { get; }
@@ -221,7 +230,40 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
 
     public bool ShowTodoEmpty => OpenWorkItems.Count == 0;
 
-    public bool ShowRecentEmpty => RecentRows.Count == 0;
+    public bool ShowRecentEmpty => RecentRows.Count == 0 && !ShowPeek && !ShowPinnedItem;
+
+    public bool HasBoardContent => RecentRows.Count > 0 || ShowPinnedItem;
+
+    public bool ShowPinnedItem => Session.HasBoardPin && !string.IsNullOrWhiteSpace(_pinnedTitle);
+
+    public string PinnedTitle => _pinnedTitle;
+
+    public string PinnedKindLabel => _pinnedKindLabel;
+
+    public bool ShowPeek => _peekRow is not null;
+
+    public string PeekTitle => _peekRow?.Title ?? "";
+
+    public string PeekBody => _peekRow?.Body ?? "";
+
+    public string PeekFileSummary => _peekRow?.FileName ?? "";
+
+    public bool ShowPeekFile => !string.IsNullOrWhiteSpace(_peekRow?.FileName);
+
+    public bool ShowPeekImage => !string.IsNullOrWhiteSpace(_peekRow?.ImagePath);
+
+    public string PeekImagePath => _peekRow?.ImagePath ?? "";
+
+    public ImageSource? PeekImage => CapsuleImageLoader.TryLoad(_peekRow?.ImagePath, 160);
+
+    public bool IsPeekPinned =>
+        _peekRow is not null
+        && Session.PinnedBoardKind == "note"
+        && Session.PinnedBoardId == _peekRow.Id;
+
+    public string PinPeekLabel => IsPeekPinned ? "고정 해제" : "고정한 메모";
+
+    public string TodoFooterLabel => $"할 일 {OpenWorkItems.Count}개";
 
     public bool HasMorePending => PendingFiles.Count > CapsuleLayout.PreviewRowCount;
 
@@ -264,6 +306,7 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
     public ICommand OpenTodayCommand { get; }
     public ICommand ToggleRecentCommand { get; }
     public ICommand ToggleTodoCommand { get; }
+    public ICommand ShowRecentCommand { get; }
     public ICommand OpenLongNoteCommand { get; }
     public ICommand HideCommand { get; }
     public ICommand ExitCommand { get; }
@@ -271,6 +314,12 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
     public ICommand AttachCommand { get; }
     public ICommand ToggleAddTodoCommand { get; }
     public ICommand TogglePinPreviewCommand { get; }
+    public ICommand CollapseBoardCommand { get; }
+    public ICommand ClosePeekCommand { get; }
+    public ICommand PinPeekCommand { get; }
+    public ICommand UnpinBoardCommand { get; }
+    public ICommand CopyPeekCommand { get; }
+    public ICommand OpenPeekInDayCommand { get; }
     public ICommand ShowStorageCommand { get; }
     public ICommand PickWorkCommand { get; }
     public ICommand ClearWorkCommand { get; }
@@ -366,7 +415,27 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         SaveDraft();
     }
 
-    public void OpenRecentEntry(CapsuleRecentRow row) => OpenEntryRequested?.Invoke(row);
+    public void OpenRecentEntry(CapsuleRecentRow row)
+    {
+        _peekRow = row;
+        RaisePeek();
+    }
+
+    public void OpenWorkFromTodo(OpenWorkItemRow row)
+    {
+        if (Session.PinnedBoardKind == "todo" && Session.PinnedBoardId == row.Id)
+        {
+            Session.ClearBoardPin();
+        }
+        else
+        {
+            Session.SetBoardPin("todo", row.Id);
+        }
+
+        RefreshPinned();
+        Raise(nameof(ShowPinnedItem));
+        Raise(nameof(HasBoardContent));
+    }
 
     public void TogglePanel(CapsulePanelKind kind)
     {
@@ -521,17 +590,10 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
             _successFlash = $"{local:HH:mm} 기록됨";
             StatusText = _successFlash;
             Session.NotifyDataChanged();
-            if (Session.PinnedPreview == FloatingPinnedPreview.Todo)
-            {
-                SetPanel(CapsulePanelKind.Todo);
-            }
-            else if (Session.PinnedPreview == FloatingPinnedPreview.Recent)
+            ClosePeek();
+            if (!Session.BoardCollapsed)
             {
                 SetPanel(CapsulePanelKind.Recent);
-            }
-            else
-            {
-                SetPanel(CapsulePanelKind.None);
             }
 
             SuccessFlashRequested?.Invoke();
@@ -588,6 +650,11 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
             ShowAddTodoInput = false;
             Raise(nameof(ShowAddTodoInput));
             Session.NotifyDataChanged();
+            if (!Session.BoardCollapsed)
+            {
+                SetPanel(CapsulePanelKind.Todo);
+            }
+
             StatusText = "할 일을 남겼습니다";
             _saveSucceeded = false;
             _ = created;
@@ -625,7 +692,16 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
             _undoTitle = result.WorkItem.Title;
             StatusText = "완료 기록이 남았습니다";
             ErrorText = "";
+            if (Session.PinnedBoardKind == "todo" && Session.PinnedBoardId == row.Id)
+            {
+                Session.ClearBoardPin();
+            }
+
             Session.NotifyDataChanged();
+            if (!Session.BoardCollapsed)
+            {
+                SetPanel(CapsulePanelKind.Recent);
+            }
             Raise(nameof(ShowUndoComplete));
             ((AsyncRelayCommand)UndoCompleteCommand).RaiseCanExecuteChanged();
         }
@@ -779,20 +855,32 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         Raise(nameof(HasMoreTodos));
         Raise(nameof(MoreTodosText));
         Raise(nameof(ShowTodoEmpty));
+        Raise(nameof(TodoFooterLabel));
+        RefreshPinned();
     }
 
     private void ReloadRecent()
     {
         RecentRows.Clear();
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Session.Database.DisplayTimeZone.TimeZone).DateTime);
-        var entries = Session.Database.Entries.ListForLocalDateAsync(today).GetAwaiter().GetResult();
-        var picked = RecentPreviewSelector.TakeLatestThenChronological(entries, static item => item.OccurredAtUtc, static item => item.Seq);
-        foreach (var entry in picked)
+        var entries = Session.Database.Entries.ListRecentVisible(CapsuleLayout.PreviewRowCount);
+        foreach (var entry in entries)
         {
             RecentRows.Add(CapsuleRecentRow.From(entry, Session));
         }
 
+        RefreshPinned();
+        if (_peekRow is not null && RecentRows.All(row => row.Id != _peekRow.Id) && Session.PinnedBoardId != _peekRow.Id)
+        {
+            var still = Session.Database.Entries.GetByIdAsync(_peekRow.Id).GetAwaiter().GetResult();
+            if (still is null || still.DeletedAtUtc is not null)
+            {
+                ClosePeek();
+            }
+        }
+
         Raise(nameof(ShowRecentEmpty));
+        Raise(nameof(HasBoardContent));
+        Raise(nameof(TodoFooterLabel));
     }
 
     private void RestorePending(IReadOnlyList<PendingAttachment> files)
@@ -949,7 +1037,185 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         RaiseWorkChip();
     }
 
-    public void OpenWorkFromTodo(OpenWorkItemRow row) => OpenWorkRequested?.Invoke(row.Id);
+    private void ToggleBoard()
+    {
+        if (_panelKind is CapsulePanelKind.Recent or CapsulePanelKind.Todo)
+        {
+            CollapseBoard();
+            return;
+        }
+
+        Session.SetBoardCollapsed(false);
+        if (RecentRows.Count > 0 || ShowPinnedItem)
+        {
+            SetPanel(CapsulePanelKind.Recent);
+            return;
+        }
+
+        if (OpenWorkItems.Count > 0)
+        {
+            SetPanel(CapsulePanelKind.Todo);
+        }
+    }
+
+    private void ShowTodosOnBoard()
+    {
+        Session.SetBoardCollapsed(false);
+        ClosePeek();
+        SetPanel(CapsulePanelKind.Todo);
+    }
+
+    private void ShowRecentOnBoard()
+    {
+        Session.SetBoardCollapsed(false);
+        ClosePeek();
+        SetPanel(CapsulePanelKind.Recent);
+    }
+
+    private void CollapseBoard()
+    {
+        Session.SetBoardCollapsed(true);
+        ClosePeek();
+        SetPanel(CapsulePanelKind.None);
+    }
+
+    private void RestoreBoardVisibility()
+    {
+        if (Session.BoardCollapsed || !HasBoardContent)
+        {
+            return;
+        }
+
+        SetPanel(CapsulePanelKind.Recent);
+    }
+
+    private void ClosePeek()
+    {
+        if (_peekRow is null)
+        {
+            return;
+        }
+
+        _peekRow = null;
+        RaisePeek();
+    }
+
+    private void PinPeek()
+    {
+        if (_peekRow is null)
+        {
+            return;
+        }
+
+        if (IsPeekPinned)
+        {
+            Session.ClearBoardPin();
+        }
+        else
+        {
+            Session.SetBoardPin("note", _peekRow.Id);
+        }
+
+        RefreshPinned();
+        Raise(nameof(ShowPinnedItem));
+        Raise(nameof(HasBoardContent));
+        Raise(nameof(IsPeekPinned));
+        Raise(nameof(PinPeekLabel));
+    }
+
+    private void UnpinBoard()
+    {
+        Session.ClearBoardPin();
+        RefreshPinned();
+        Raise(nameof(ShowPinnedItem));
+        Raise(nameof(HasBoardContent));
+        Raise(nameof(IsPeekPinned));
+        Raise(nameof(PinPeekLabel));
+    }
+
+    private void CopyPeek()
+    {
+        if (string.IsNullOrWhiteSpace(PeekBody))
+        {
+            return;
+        }
+
+        System.Windows.Clipboard.SetText(PeekBody);
+        StatusText = "원문을 복사했습니다";
+        Raise(nameof(StatusText));
+    }
+
+    private void OpenPeekInDay()
+    {
+        if (_peekRow is null)
+        {
+            return;
+        }
+
+        OpenEntryRequested?.Invoke(_peekRow);
+    }
+
+    private void RaisePeek()
+    {
+        Raise(nameof(ShowPeek));
+        Raise(nameof(PeekTitle));
+        Raise(nameof(PeekBody));
+        Raise(nameof(PeekFileSummary));
+        Raise(nameof(ShowPeekFile));
+        Raise(nameof(ShowPeekImage));
+        Raise(nameof(PeekImagePath));
+        Raise(nameof(PeekImage));
+        Raise(nameof(IsPeekPinned));
+        Raise(nameof(PinPeekLabel));
+        Raise(nameof(ShowRecentEmpty));
+    }
+
+    private void RefreshPinned()
+    {
+        _pinnedTitle = "";
+        _pinnedKindLabel = "";
+        if (!Session.HasBoardPin)
+        {
+            Raise(nameof(PinnedTitle));
+            Raise(nameof(PinnedKindLabel));
+            Raise(nameof(ShowPinnedItem));
+            return;
+        }
+
+        if (Session.PinnedBoardKind == "note")
+        {
+            var entry = Session.Database.Entries.GetByIdAsync(Session.PinnedBoardId).GetAwaiter().GetResult();
+            if (entry is null || entry.DeletedAtUtc is not null)
+            {
+                Session.ClearBoardPin();
+            }
+            else
+            {
+                _pinnedKindLabel = "고정한 메모";
+                _pinnedTitle = string.IsNullOrWhiteSpace(entry.TitleSnapshot)
+                    ? CapsuleRecentRow.FirstLineOf(entry.Body)
+                    : entry.TitleSnapshot;
+            }
+        }
+        else if (Session.PinnedBoardKind == "todo")
+        {
+            var work = Session.Database.WorkItems.GetAsync(Session.PinnedBoardId).GetAwaiter().GetResult();
+            if (work is null || work.Status != WorkItemStatus.Open)
+            {
+                Session.ClearBoardPin();
+            }
+            else
+            {
+                _pinnedKindLabel = "고정한 일";
+                _pinnedTitle = work.Title;
+            }
+        }
+
+        Raise(nameof(PinnedTitle));
+        Raise(nameof(PinnedKindLabel));
+        Raise(nameof(ShowPinnedItem));
+        Raise(nameof(HasBoardContent));
+    }
 
     private void RaiseWorkChip()
     {

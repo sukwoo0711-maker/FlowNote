@@ -6,41 +6,104 @@
     <Border Background="{StaticResource CapsulePanelBrush}"
             BorderBrush="{StaticResource CapsuleBorderBrush}"
             BorderThickness="1"
-            CornerRadius="14"
+            CornerRadius="16"
             Padding="12,8,12,10">
         <Grid>
             <DockPanel x:Name="RecentHost" Visibility="{Binding ShowRecentPanel, Converter={StaticResource BoolToVis}}">
-                <DockPanel DockPanel.Dock="Top" Height="24" Margin="0,0,0,4">
-                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="하루 전체"
-                            Margin="8,0,0,0"
-                            Command="{Binding OpenTodayCommand}" AutomationProperties.Name="하루 전체"/>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Margin="0,0,0,0"
-                            Content="{Binding PinPreviewLabel}" Command="{Binding TogglePinPreviewCommand}"
-                            AutomationProperties.Name="패널 유지"/>
-                    <TextBlock Text="최근 기록" FontSize="12" FontWeight="SemiBold"
-                               Foreground="{StaticResource CapsuleTextPrimaryBrush}" VerticalAlignment="Center"/>
+                <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="접기"
+                            Command="{Binding CollapseBoardCommand}" AutomationProperties.Name="기억판 접기"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="하루 보기"
+                            Margin="0,0,8,0" Command="{Binding OpenTodayCommand}" AutomationProperties.Name="하루 보기"/>
+                    <Button Style="{StaticResource CapsuleTextButton}" Content="{Binding TodoFooterLabel}"
+                            Command="{Binding ToggleTodoCommand}" AutomationProperties.Name="할 일 목록"/>
                 </DockPanel>
-                <TextBlock Text="오늘 기록이 아직 없습니다"
-                           Foreground="{StaticResource CapsuleTextSecondaryBrush}" FontSize="12"
-                           Visibility="{Binding ShowRecentEmpty, Converter={StaticResource BoolToVis}}"/>
-                <ItemsControl ItemsSource="{Binding RecentRows}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <controls:CompactLogRow OpenRequested="OnRecentOpen"/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Border DockPanel.Dock="Top" Padding="6,4" Margin="0,0,0,6" CornerRadius="8"
+                        Background="#22FFFFFF"
+                        Visibility="{Binding ShowPinnedItem, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="고정 해제"
+                                Command="{Binding UnpinBoardCommand}" AutomationProperties.Name="고정 해제"/>
+                        <StackPanel>
+                            <TextBlock FontSize="11" Foreground="{StaticResource CapsuleTextSecondaryBrush}"
+                                       Text="{Binding PinnedKindLabel}"/>
+                            <TextBlock FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                       Foreground="{StaticResource CapsuleTextPrimaryBrush}"
+                                       Text="{Binding PinnedTitle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <DockPanel Visibility="{Binding ShowPeek, Converter={StaticResource BoolToVis}}">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="닫기"
+                                Command="{Binding ClosePeekCommand}" AutomationProperties.Name="원문 닫기"/>
+                        <TextBlock FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                   Foreground="{StaticResource CapsuleTextPrimaryBrush}"
+                                   Text="{Binding PeekTitle}"/>
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Top" FontSize="12" TextWrapping="Wrap" MaxHeight="72"
+                               Foreground="{StaticResource CapsuleTextPrimaryBrush}"
+                               Text="{Binding PeekBody}"/>
+                    <TextBlock DockPanel.Dock="Top" Margin="0,6,0,0" FontSize="11"
+                               Foreground="{StaticResource CapsuleTextSecondaryBrush}"
+                               Visibility="{Binding ShowPeekFile, Converter={StaticResource BoolToVis}}"
+                               Text="{Binding PeekFileSummary}"/>
+                    <Image DockPanel.Dock="Top" Height="56" Margin="0,6,0,0" Stretch="Uniform"
+                           HorizontalAlignment="Left"
+                           Visibility="{Binding ShowPeekImage, Converter={StaticResource BoolToVis}}"
+                           Source="{Binding PeekImage}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Style="{StaticResource CapsuleTextButton}" Content="{Binding PinPeekLabel}"
+                                Command="{Binding PinPeekCommand}" AutomationProperties.Name="고정한 메모"/>
+                        <Button Style="{StaticResource CapsuleTextButton}" Content="복사" Margin="8,0,0,0"
+                                Command="{Binding CopyPeekCommand}" AutomationProperties.Name="원문 복사"/>
+                        <Button Style="{StaticResource CapsuleTextButton}" Content="하루에서 보기" Margin="8,0,0,0"
+                                Command="{Binding OpenPeekInDayCommand}" AutomationProperties.Name="하루에서 보기"/>
+                    </StackPanel>
+                </DockPanel>
+                <StackPanel Visibility="{Binding ShowPeek, Converter={StaticResource InverseBoolToVis}}">
+                    <TextBlock Text="최근 기록이 없습니다"
+                               Foreground="{StaticResource CapsuleTextSecondaryBrush}" FontSize="12"
+                               Visibility="{Binding ShowRecentEmpty, Converter={StaticResource BoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding RecentRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <controls:CompactLogRow OpenRequested="OnRecentOpen"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </DockPanel>
 
             <DockPanel x:Name="TodoHost" Visibility="{Binding ShowTodoPanel, Converter={StaticResource BoolToVis}}">
+                <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="접기"
+                            Command="{Binding CollapseBoardCommand}" AutomationProperties.Name="기억판 접기"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="하루 보기"
+                            Margin="0,0,8,0" Command="{Binding OpenTodayCommand}" AutomationProperties.Name="하루 보기"/>
+                    <Button Style="{StaticResource CapsuleTextButton}" Content="최근 기록"
+                            Command="{Binding ShowRecentCommand}" AutomationProperties.Name="최근 기록"/>
+                </DockPanel>
+                <Border DockPanel.Dock="Top" Padding="6,4" Margin="0,0,0,6" CornerRadius="8"
+                        Background="#22FFFFFF"
+                        Visibility="{Binding ShowPinnedItem, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="고정 해제"
+                                Command="{Binding UnpinBoardCommand}" AutomationProperties.Name="고정 해제"/>
+                        <StackPanel>
+                            <TextBlock FontSize="11" Foreground="{StaticResource CapsuleTextSecondaryBrush}"
+                                       Text="{Binding PinnedKindLabel}"/>
+                            <TextBlock FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                       Foreground="{StaticResource CapsuleTextPrimaryBrush}"
+                                       Text="{Binding PinnedTitle}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
                 <DockPanel DockPanel.Dock="Top" Height="24" Margin="0,0,0,4">
                     <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="{Binding MoreTodosText}"
                             Command="{Binding OpenTodayCommand}"
                             Visibility="{Binding HasMoreTodos, Converter={StaticResource BoolToVis}}"
                             AutomationProperties.Name="할 일 전체 보기"/>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Margin="0,0,4,0"
-                            Content="{Binding PinPreviewLabel}" Command="{Binding TogglePinPreviewCommand}"
-                            AutomationProperties.Name="패널 유지"/>
                     <TextBlock Text="{Binding OpenCountText}" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource CapsuleTextPrimaryBrush}" VerticalAlignment="Center"/>
                 </DockPanel>
@@ -110,6 +173,7 @@
                          VerticalContentAlignment="Top"
                          Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
                          PreviewKeyDown="OnLongMemoKeyDown"
+                         DataObject.Pasting="OnLongMemoPasting"
                          AutomationProperties.Name="긴 메모"/>
             </DockPanel>
         </Grid>

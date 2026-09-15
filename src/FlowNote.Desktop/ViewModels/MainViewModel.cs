@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 using FlowNote.Core.Assist;
@@ -21,6 +22,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ChronologicalCommand = new RelayCommand(() => Session.SetViewMode(TimelineViewMode.Chronological));
         ByWorkCommand = new RelayCommand(() => Session.SetViewMode(TimelineViewMode.ByWork));
         PanoramaCommand = new RelayCommand(() => Session.SetViewMode(TimelineViewMode.Panorama));
+        OpenPanoramaNoteCommand = new RelayCommandParam(parameter =>
+        {
+            if (parameter is TimelineRow row)
+            {
+                Select(row);
+            }
+        });
+        TogglePanoramaSegmentCommand = new RelayCommandParam(parameter =>
+        {
+            if (parameter is PanoramaSegmentRow segment)
+            {
+                segment.IsExpanded = !segment.IsExpanded;
+            }
+        });
         SearchCommand = new RelayCommand(RunSearch);
         DismissOnboardingCommand = new RelayCommand(session.DismissOnboarding);
         CloseDetailCommand = new RelayCommand(CloseDetail);
@@ -28,6 +43,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         OpenTodosCommand = new RelayCommand(() => SetPage(MainPage.Todos));
         OpenSettingsCommand = new RelayCommand(() => SetPage(MainPage.Settings));
         OpenDayReportCommand = new RelayCommand(() => DayReportRequested?.Invoke(null));
+        OpenStorageFolderCommand = new RelayCommand(OpenStorageFolder);
         ToggleContinueCommand = new RelayCommand(() => ShowContinuePopup = !ShowContinuePopup);
         OpenContinueWorkCommand = new RelayCommandParam(parameter =>
         {
@@ -80,11 +96,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             Session.Database.Assist.SetMode(AssistMode.Off);
             Session.Engine?.Disable();
+            AssistEngineRequested?.Invoke();
             Session.NotifyDataChanged();
         });
         SetAssistRulesCommand = new RelayCommand(() =>
         {
             Session.Database.Assist.SetMode(AssistMode.RulesOnly);
+            AssistEngineRequested?.Invoke();
             Session.NotifyDataChanged();
         });
         SetAssistLocalCommand = new RelayCommand(() =>
@@ -96,6 +114,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
 
             Session.Database.Assist.SetMode(AssistMode.LocalAssist);
+            AssistEngineRequested?.Invoke();
             Session.NotifyDataChanged();
         });
         ClearAssistCommand = new RelayCommand(ClearAssist);
@@ -116,7 +135,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         });
         ContinueWithoutAiCommand = new RelayCommand(() =>
         {
-            Session.Database.Assist.SetMode(AssistMode.RulesOnly);
+            Session.Database.Assist.SetMode(AssistMode.Off);
+            Session.Engine?.Disable();
+            AssistEngineRequested?.Invoke();
             Session.NotifyDataChanged();
         });
         session.DataChanged += Reload;
@@ -129,7 +150,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             if (args.PropertyName is nameof(AppSession.ViewMode))
             {
-                RaiseViewFlags();
+                Reload();
             }
         };
         Reload();
@@ -156,6 +177,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string DateLabel => Session.SelectedDate.ToString("yyyy년 M월 d일");
 
+    public string DateHeading => Session.SelectedDate.ToString("M월 d일");
+
+    public bool HasMinimap => MinimapLanes.Count > 0;
+
     public string SummaryText { get; private set; } = "기록 0개 · 완료 업무 0개 · 첨부 0개";
 
     public string EmptyText { get; private set; } = "아직 기록이 없습니다";
@@ -172,9 +197,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public bool IsPanorama => Session.ViewMode == TimelineViewMode.Panorama;
 
+    public bool HasDayEntries { get; private set; }
+
     public bool ShowTimeline => IsFlow && !IsPanorama && HasRows;
 
-    public bool ShowEmpty => IsFlow && !IsPanorama && !HasRows;
+    public bool ShowPanorama => IsFlow && IsPanorama && HasPanorama;
+
+    public bool ShowPanoramaHint => IsFlow && IsPanorama && HasDayEntries && !HasPanorama;
+
+    public bool HasUnclassifiedPanorama => PanoramaSegments.Any(static item => item.IsUnclassified);
+
+    public bool ShowEmpty => IsFlow && !HasDayEntries;
 
     public bool ShowDetailColumn => HasDetail && !IsNarrow;
 
@@ -251,7 +284,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string AssistModeText { get; private set; } = "규칙만";
 
-    public string AssistModelText { get; private set; } = "외부 AI 없음 · 기본은 규칙 모드";
+    public string AssistModelText { get; private set; } = "외부 AI 없음 · 기본은 규칙 연결";
+
+    public string CaptureHotkeyText { get; private set; } = "기록 창 단축키는 Ctrl+Alt+Space입니다.";
 
     public string MinimapLegend { get; private set; } = "기록 기반 연결 · 실작업시간 아님";
 
@@ -272,7 +307,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private long _contextGeneration;
     private string? _latestNoteId;
 
-    public string PanoramaHint => "파노라마 보기는 아직 없습니다. 이 날짜의 기록은 시간순·업무별에서 그대로 볼 수 있습니다.";
+    public string PanoramaHint => HasPanorama
+        ? ""
+        : "이 날짜에 이을 수 있는 업무 구간이 없습니다. 미연결 기록은 아래에 남습니다.";
+
+    public ObservableCollection<PanoramaSegmentRow> PanoramaSegments { get; } = [];
+
+    public bool HasPanorama => PanoramaSegments.Count > 0;
+
+    public string PanoramaSummary { get; private set; } = "";
+
+    public bool ShowPanoramaSummary => IsPanorama && !string.IsNullOrWhiteSpace(PanoramaSummary);
 
     public string SearchText { get; set; } = "";
 
@@ -299,6 +344,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand OpenTodosCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenDayReportCommand { get; }
+    public ICommand OpenPanoramaNoteCommand { get; }
+    public ICommand TogglePanoramaSegmentCommand { get; }
     public ICommand ToggleContinueCommand { get; }
     public ICommand OpenContinueWorkCommand { get; }
     public ICommand ContinueRecordingCommand { get; }
@@ -327,6 +374,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand ImportModelCommand { get; }
     public ICommand RetryEngineCommand { get; }
     public ICommand ContinueWithoutAiCommand { get; }
+    public ICommand OpenStorageFolderCommand { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -340,7 +388,24 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public event Action? AssistScopeAckRequested;
 
+    public event Action? AssistEngineRequested;
+
     public event Action? ImportModelRequested;
+
+    private void OpenStorageFolder()
+    {
+        var root = Session.Database.Paths.Root;
+        if (!Directory.Exists(root))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = root,
+            UseShellExecute = true
+        });
+    }
 
     public void SetNarrow(bool isNarrow)
     {
@@ -426,6 +491,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         var threadIds = assignments.Values.Where(static item => item.ThreadId is not null).Select(static item => item.ThreadId!);
         var threads = Session.Database.Assist.ListThreadsById(threadIds);
         ReloadMinimap(entries, assignments, threads);
+        ReloadPanorama(entries, assignments, threads);
         ReloadAssistSettings();
         Rows.Clear();
         if (Session.ViewMode != TimelineViewMode.Panorama)
@@ -471,15 +537,25 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
         }
 
-        HasRows = Rows.Count > 0;
-        EmptyText = HasRows ? "" : "아직 기록이 없습니다";
+        HasDayEntries = entries.Count > 0;
+        HasRows = Session.ViewMode == TimelineViewMode.Panorama ? HasDayEntries : Rows.Count > 0;
+        EmptyText = HasDayEntries ? "" : "아직 기록이 없습니다";
         Raise(nameof(DateLabel));
+        Raise(nameof(DateHeading));
         Raise(nameof(HeaderTitle));
         Raise(nameof(SummaryText));
         Raise(nameof(HasRows));
+        Raise(nameof(HasDayEntries));
         Raise(nameof(EmptyText));
         Raise(nameof(ShowTimeline));
         Raise(nameof(ShowEmpty));
+        Raise(nameof(ShowPanorama));
+        Raise(nameof(ShowPanoramaHint));
+        Raise(nameof(ShowPanoramaSummary));
+        Raise(nameof(HasPanorama));
+        Raise(nameof(HasUnclassifiedPanorama));
+        Raise(nameof(PanoramaHint));
+        Raise(nameof(PanoramaSummary));
         RaiseViewFlags();
         Raise(nameof(Session));
         ReloadContinue();
@@ -489,7 +565,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         if (!string.IsNullOrEmpty(Session.SelectedEntryId))
         {
-            var selected = Rows.FirstOrDefault(item => item.Id == Session.SelectedEntryId);
+            var selected = FindRow(Session.SelectedEntryId);
             if (selected is not null)
             {
                 Select(selected);
@@ -540,6 +616,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Raise(nameof(IsPanorama));
         Raise(nameof(ShowTimeline));
         Raise(nameof(ShowEmpty));
+        Raise(nameof(ShowPanorama));
+        Raise(nameof(ShowPanoramaHint));
+        Raise(nameof(ShowPanoramaSummary));
+        Raise(nameof(HasPanorama));
+        Raise(nameof(HasUnclassifiedPanorama));
+        Raise(nameof(PanoramaHint));
         Raise(nameof(IsFlow));
     }
 
@@ -552,6 +634,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Raise(nameof(IsSettingsPage));
         Raise(nameof(ShowTimeline));
         Raise(nameof(ShowEmpty));
+        Raise(nameof(ShowPanorama));
+        Raise(nameof(ShowPanoramaHint));
+        Raise(nameof(ShowPanoramaSummary));
     }
 
     public void OpenWork(string workItemId)
@@ -888,7 +973,167 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         Raise(nameof(MinimapLegend));
+        Raise(nameof(HasMinimap));
     }
+
+    private void ReloadPanorama(
+        IReadOnlyList<TimelineEntry> entries,
+        IReadOnlyDictionary<string, EntryContextAssignment> assignments,
+        IReadOnlyDictionary<string, ContextThread> threads)
+    {
+        var expanded = PanoramaSegments
+            .Where(static item => item.IsExpanded)
+            .Select(static item => item.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        var projection = DayFlowProjector.Project(entries, assignments, threads);
+        var byId = entries.ToDictionary(static item => item.Id, StringComparer.Ordinal);
+        var staged = new List<(DateTimeOffset Time, long Seq, PanoramaSegmentRow Row)>();
+
+        foreach (var episode in projection.Episodes)
+        {
+            var observed = episode.ObservedEntryIds
+                .Select(id => byId.GetValueOrDefault(id))
+                .OfType<TimelineEntry>()
+                .OrderBy(static item => item.OccurredAtUtc)
+                .ThenBy(static item => item.Seq)
+                .ToList();
+            if (observed.Count == 0)
+            {
+                continue;
+            }
+
+            var first = observed[0];
+            var last = observed[^1];
+            var attachmentCount = observed.Sum(item => Session.Database.Entries.ListAttachments(item.Id).Count);
+            var completion = observed.Any(item =>
+                assignments.TryGetValue(item.Id, out var assignment)
+                && assignment.Role == ContextRole.CompletionMention);
+            staged.Add((first.OccurredAtUtc, first.Seq, new PanoramaSegmentRow
+            {
+                Key = "episode:" + episode.ThreadId + ":" + first.Id,
+                Kind = PanoramaSegmentKind.Episode,
+                Title = episode.Title,
+                TimeLabel = FormatObservedRange(first.OccurredAtUtc, last.OccurredAtUtc),
+                CountLabel = FormatCounts(observed.Count, attachmentCount),
+                StatusLabel = completion
+                    ? "완료 언급"
+                    : episode.HasObservationGap ? "관측 공백" : "",
+                ThreadId = episode.ThreadId,
+                AccentIndex = AccentFor(episode.ThreadId),
+                HasObservationGap = episode.HasObservationGap,
+                IsExpanded = expanded.Contains("episode:" + episode.ThreadId + ":" + first.Id),
+                Notes = observed.Select(item =>
+                {
+                    assignments.TryGetValue(item.Id, out var assignment);
+                    threads.TryGetValue(assignment?.ThreadId ?? "", out var thread);
+                    return TimelineRow.From(item, Session, assignment, thread, Session.Database.Assist.LatestJob(item.Id));
+                }).ToList()
+            }));
+        }
+
+        foreach (var request in projection.RequestMarkers)
+        {
+            if (!byId.TryGetValue(request.EntryId, out var entry))
+            {
+                continue;
+            }
+
+            var attachments = Session.Database.Entries.ListAttachments(entry.Id).Count;
+            assignments.TryGetValue(entry.Id, out var assignment);
+            threads.TryGetValue(request.ThreadId, out var thread);
+            var key = "request:" + request.EntryId;
+            staged.Add((entry.OccurredAtUtc, entry.Seq, new PanoramaSegmentRow
+            {
+                Key = key,
+                Kind = PanoramaSegmentKind.Request,
+                Title = request.Title,
+                TimeLabel = FormatObservedRange(entry.OccurredAtUtc, entry.OccurredAtUtc),
+                CountLabel = FormatCounts(1, attachments),
+                StatusLabel = AssistCodec.RoleLabel(request.Role),
+                ThreadId = request.ThreadId,
+                AccentIndex = AccentFor(request.ThreadId),
+                IsExpanded = expanded.Contains(key),
+                Notes = [TimelineRow.From(entry, Session, assignment, thread, Session.Database.Assist.LatestJob(entry.Id))]
+            }));
+        }
+
+        var unclassified = projection.UnclassifiedEntryIds
+            .Select(id => byId.GetValueOrDefault(id))
+            .OfType<TimelineEntry>()
+            .OrderBy(static item => item.OccurredAtUtc)
+            .ThenBy(static item => item.Seq)
+            .ToList();
+        if (unclassified.Count > 0)
+        {
+            var first = unclassified[0];
+            const string key = "unclassified";
+            staged.Add((first.OccurredAtUtc, first.Seq, new PanoramaSegmentRow
+            {
+                Key = key,
+                Kind = PanoramaSegmentKind.Unclassified,
+                Title = "미연결 기록",
+                TimeLabel = FormatObservedRange(first.OccurredAtUtc, unclassified[^1].OccurredAtUtc),
+                CountLabel = FormatCounts(unclassified.Count, unclassified.Sum(item => Session.Database.Entries.ListAttachments(item.Id).Count)),
+                StatusLabel = "단서 부족",
+                ThreadId = "",
+                AccentIndex = 0,
+                IsExpanded = expanded.Contains(key),
+                Notes = unclassified.Select(item =>
+                {
+                    assignments.TryGetValue(item.Id, out var assignment);
+                    return TimelineRow.From(item, Session, assignment, null, Session.Database.Assist.LatestJob(item.Id));
+                }).ToList()
+            }));
+        }
+
+        PanoramaSegments.Clear();
+        PanoramaSegmentRow? previousEpisode = null;
+        foreach (var item in staged.OrderBy(static item => item.Time).ThenBy(static item => item.Seq))
+        {
+            if (item.Row.IsEpisode && previousEpisode is not null && previousEpisode.ThreadId == item.Row.ThreadId)
+            {
+                item.Row.ShowsSameWorkReturn = true;
+            }
+
+            PanoramaSegments.Add(item.Row);
+            if (item.Row.IsEpisode)
+            {
+                previousEpisode = item.Row;
+            }
+        }
+
+        PanoramaSummary = string.Join(
+            " → ",
+            PanoramaSegments.Where(static item => item.IsEpisode).Select(static item => item.Title));
+    }
+
+    private TimelineRow? FindRow(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return null;
+        }
+
+        return Rows.FirstOrDefault(item => item.Id == id)
+            ?? PanoramaSegments.SelectMany(static item => item.Notes).FirstOrDefault(item => item.Id == id);
+    }
+
+    private string FormatObservedRange(DateTimeOffset startUtc, DateTimeOffset endUtc)
+    {
+        var zone = Session.Database.DisplayTimeZone.TimeZone;
+        var start = TimeZoneInfo.ConvertTime(startUtc, zone).ToString("HH:mm");
+        var end = TimeZoneInfo.ConvertTime(endUtc, zone).ToString("HH:mm");
+        return start == end ? start : start + "~" + end;
+    }
+
+    private static string FormatCounts(int notes, int attachments)
+    {
+        var text = notes + "개 기록";
+        return attachments == 0 ? text : text + " · 첨부 " + attachments;
+    }
+
+    private static int AccentFor(string threadId)
+        => Math.Abs(StringComparer.Ordinal.GetHashCode(threadId)) % 6;
 
     private void ReloadAssistSettings()
     {
@@ -899,11 +1144,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
             AssistMode.LocalAssist => "로컬 보조",
             _ => "규칙만"
         };
-        AssistModelText = settings.Mode == AssistMode.LocalAssist
-            ? "외부 AI 없음 · 동봉 로컬 엔진 · " + (Session.Engine?.StatusText ?? "모델이 없으면 가져오기")
-            : "외부 AI 없음 · 기본은 규칙 모드 · 모델이 없어도 원문 기록은 됩니다";
+        AssistModelText = settings.Mode switch
+        {
+            AssistMode.LocalAssist => "외부 AI 없음 · 동봉 로컬 엔진 · " + (Session.Engine?.StatusText ?? "모델이 없으면 가져오기"),
+            AssistMode.Off => "외부 AI 없음 · 연결 분석 끔 · 원문 저장은 그대로 동작합니다",
+            _ => "외부 AI 없음 · 기본은 규칙 연결 · 모델 없이 같은 업무를 이습니다"
+        };
         Raise(nameof(AssistModeText));
         Raise(nameof(AssistModelText));
+    }
+
+    public void SetCaptureHotkeyStatus(bool registered)
+    {
+        CaptureHotkeyText = registered
+            ? "기록 창 단축키는 Ctrl+Alt+Space입니다. 다른 앱을 쓰다가도 바로 한 줄 입력칸으로 옵니다."
+            : "Ctrl+Alt+Space는 다른 앱이 쓰고 있어 등록하지 못했습니다. 트레이의 기록 창으로 열 수 있습니다.";
+        Raise(nameof(CaptureHotkeyText));
     }
 
     private void ReloadAssistChoices()
@@ -1152,6 +1408,65 @@ public enum MainPage
     Flow,
     Todos,
     Settings
+}
+
+public enum PanoramaSegmentKind
+{
+    Episode,
+    Request,
+    Unclassified
+}
+
+public sealed class PanoramaSegmentRow : INotifyPropertyChanged
+{
+    private bool _expanded;
+
+    public required string Key { get; init; }
+
+    public required PanoramaSegmentKind Kind { get; init; }
+
+    public required string Title { get; init; }
+
+    public required string TimeLabel { get; init; }
+
+    public required string CountLabel { get; init; }
+
+    public required string StatusLabel { get; init; }
+
+    public required string ThreadId { get; init; }
+
+    public required int AccentIndex { get; init; }
+
+    public bool HasObservationGap { get; init; }
+
+    public bool ShowsSameWorkReturn { get; set; }
+
+    public required IReadOnlyList<TimelineRow> Notes { get; init; }
+
+    public bool IsEpisode => Kind == PanoramaSegmentKind.Episode;
+
+    public bool IsRequest => Kind == PanoramaSegmentKind.Request;
+
+    public bool IsUnclassified => Kind == PanoramaSegmentKind.Unclassified;
+
+    public bool ShowStatus => !string.IsNullOrWhiteSpace(StatusLabel);
+
+    public bool IsExpanded
+    {
+        get => _expanded;
+        set
+        {
+            if (_expanded == value)
+            {
+                return;
+            }
+
+            _expanded = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public sealed class MinimapLane

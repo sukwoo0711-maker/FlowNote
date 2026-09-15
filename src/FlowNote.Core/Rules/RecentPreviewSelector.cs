@@ -16,4 +16,20 @@ public static class RecentPreviewSelector
             .ThenBy(seq)
             .ToList();
     }
+
+    public static bool IsBoardEntry(string kind)
+        => kind is "note" or "task_completed";
+
+    public static IReadOnlyList<T> TakeLatestNewestFirst<T>(
+        IEnumerable<T> items,
+        Func<T, DateTimeOffset> recorded,
+        Func<T, long> seq,
+        int count = CapsuleLayout.PreviewRowCount)
+    {
+        return items
+            .OrderByDescending(recorded)
+            .ThenByDescending(seq)
+            .Take(count)
+            .ToList();
+    }
 }

@@ -8,12 +8,12 @@ public sealed class RulesEngineTests
     private readonly RulesEngine _engine = new();
 
     [Fact]
-    public void Unique_issue_key_links_with_unknown_role()
+    public void Unique_issue_key_links_as_performed()
     {
         var result = _engine.Decide(Request("DEV-42 로그 확인", [Candidate("t1", "DEV-42")]), false, false);
         Assert.Equal(AssistDecision.Link, result.Decision);
         Assert.Equal("t1", result.Primary?.ThreadId);
-        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
         Assert.Equal("DEV-42", result.Primary?.SourceQuote);
     }
 
@@ -42,7 +42,7 @@ public sealed class RulesEngineTests
             false);
         Assert.Equal(AssistDecision.Link, result.Decision);
         Assert.Equal("t-alias", result.Primary?.ThreadId);
-        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
     }
 
     [Fact]
@@ -70,7 +70,96 @@ public sealed class RulesEngineTests
         Assert.Equal(AssistDecision.Abstain, result.Decision);
     }
 
-    private static InferenceRequest Request(string note, IReadOnlyList<ThreadCandidate> candidates)
+    [Fact]
+    public void First_note_opens_thread_from_topic()
+    {
+        var result = _engine.Decide(Request("인버터 과전류 확인 중", []), false, false);
+        Assert.Equal(AssistDecision.New, result.Decision);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        Assert.Contains("인버터", result.Primary?.TopicQuote, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Deferred_request_is_not_performed()
+    {
+        var result = _engine.Decide(Request("코스표 검토 요청 들어옴. 나중에 보기", []), false, false);
+        Assert.Equal(AssistDecision.New, result.Decision);
+        Assert.Equal(ContextRole.RequestLater, result.Primary?.Role);
+    }
+
+    [Fact]
+    public void New_topic_does_not_stick_to_unrelated_continuation()
+    {
+        var result = _engine.Decide(
+            Request(
+                "인버터 과전류 확인 중",
+                [new ThreadCandidate { ThreadId = "t-board", Title = "보드 전원", Aliases = ["보드", "전원"] }],
+                "t-board"),
+            false,
+            false);
+        Assert.Equal(AssistDecision.New, result.Decision);
+        Assert.Contains("인버터", result.Primary?.TopicQuote, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Continuation_keeps_same_thread_without_label()
+    {
+        var result = _engine.Decide(
+            Request("초기화 순서 확인", [new ThreadCandidate { ThreadId = "t-a", Title = "인버터 과전류" }], "t-a"),
+            false,
+            false);
+        Assert.Equal(AssistDecision.Link, result.Decision);
+        Assert.Equal("t-a", result.Primary?.ThreadId);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+    }
+
+    [Fact]
+    public void Token_match_returns_to_earlier_thread()
+    {
+        var result = _engine.Decide(
+            Request(
+                "인버터 조건 하나 더 확인",
+                [
+                    new ThreadCandidate { ThreadId = "t-a", Title = "인버터 과전류", Aliases = ["인버터"] },
+                    new ThreadCandidate { ThreadId = "t-b", Title = "코스표 검토", Aliases = ["코스표"] }
+                ]),
+            false,
+            false);
+        Assert.Equal(AssistDecision.Link, result.Decision);
+        Assert.Equal("t-a", result.Primary?.ThreadId);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+    }
+
+    [Fact]
+    public void Not_reproduced_is_not_completion()
+    {
+        var result = _engine.Decide(
+            Request("순서 변경 후 재현 안 됨", [new ThreadCandidate { ThreadId = "t-a", Title = "인버터 과전류" }], "t-a"),
+            false,
+            false);
+        Assert.Equal(AssistDecision.Link, result.Decision);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        Assert.NotEqual(ContextRole.CompletionMention, result.Primary?.Role);
+    }
+
+    [Fact]
+    public void Short_note_stays_unlinked()
+    {
+        var result = _engine.Decide(Request("확인", []), false, false);
+        Assert.Equal(AssistDecision.Abstain, result.Decision);
+    }
+
+    [Fact]
+    public void Generic_note_does_not_stick_to_continuation()
+    {
+        var result = _engine.Decide(
+            Request("확인", [new ThreadCandidate { ThreadId = "t-a", Title = "인버터 과전류" }], "t-a"),
+            false,
+            false);
+        Assert.Equal(AssistDecision.Abstain, result.Decision);
+    }
+
+    private static InferenceRequest Request(string note, IReadOnlyList<ThreadCandidate> candidates, string? continuation = null)
         => new()
         {
             EntryId = "e1",
@@ -78,7 +167,8 @@ public sealed class RulesEngineTests
             Candidates = candidates,
             EntryRevision = "r",
             CorrectionRevision = 0,
-            PolicyRevision = 1
+            PolicyRevision = 1,
+            ContinuationThreadId = continuation
         };
 
     private static ThreadCandidate Candidate(string id, string issue)
@@ -172,7 +262,7 @@ public sealed class AssistPolicyTests
     }
 
     [Fact]
-    public void Rules_only_does_not_create_new_thread()
+    public void Rules_only_can_create_new_thread()
     {
         var allowed = AssistPolicy.CanApply(
             new AssistSettings { Mode = AssistMode.RulesOnly },
@@ -184,7 +274,7 @@ public sealed class AssistPolicyTests
                 Primary = new InferencePrimary { TopicQuote = "구체주제명", Role = ContextRole.Performed, SourceQuote = "구체주제명" }
             },
             null);
-        Assert.False(allowed);
+        Assert.True(allowed);
     }
 
     [Fact]

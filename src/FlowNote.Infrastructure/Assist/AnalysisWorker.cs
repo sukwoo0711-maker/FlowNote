@@ -89,7 +89,8 @@ public sealed class AnalysisWorker : IDisposable
                 Candidates = candidates,
                 EntryRevision = job.EntryRevision,
                 CorrectionRevision = job.CorrectionSnapshot,
-                PolicyRevision = job.PolicyRevision
+                PolicyRevision = job.PolicyRevision,
+                ContinuationThreadId = FindContinuationThreadId(entry)
             };
 
             var rules = _rules.Decide(
@@ -155,6 +156,30 @@ public sealed class AnalysisWorker : IDisposable
                 break;
             }
         }
+    }
+
+    private string? FindContinuationThreadId(TimelineEntry entry)
+    {
+        var local = _database.DisplayTimeZone.GetLocalDate(entry.OccurredAtUtc);
+        var day = _database.Entries.ListForLocalDateAsync(local).GetAwaiter().GetResult();
+        foreach (var prior in day
+            .Where(item => item.Id != entry.Id
+                && item.Kind == EntryKind.Note
+                && item.DeletedAtUtc is null
+                && (item.OccurredAtUtc < entry.OccurredAtUtc
+                    || (item.OccurredAtUtc == entry.OccurredAtUtc && item.Seq < entry.Seq)))
+            .OrderByDescending(static item => item.OccurredAtUtc)
+            .ThenByDescending(static item => item.Seq))
+        {
+            var priorAssignment = _database.Assist.GetAssignment(prior.Id);
+            if (priorAssignment is { Resolution: AssignmentResolution.Assigned, ThreadId: { } threadId }
+                && priorAssignment.Role is ContextRole.Performed or ContextRole.CompletionMention or ContextRole.Unknown)
+            {
+                return threadId;
+            }
+        }
+
+        return null;
     }
 
     public void Dispose()

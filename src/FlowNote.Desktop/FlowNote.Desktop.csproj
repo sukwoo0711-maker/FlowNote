@@ -8,7 +8,13 @@
     <ApplicationTitle>FlowNote</ApplicationTitle>
     <RootNamespace>FlowNote.Desktop</RootNamespace>
     <AssemblyName>FlowNote.Desktop</AssemblyName>
+    <ApplicationIcon>Assets\FlowNote.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\FlowNote.ico"/>
+    <Resource Include="Assets\FlowNote.png"/>
+  </ItemGroup>
 
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
@@ -24,7 +30,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(FlowNotePublishProfile)' != 'Core'">
     <Content Include="..\..\packaging\ai-runtime\engine-lock.json"
              Link="ai-runtime\engine-lock.json"
              CopyToOutputDirectory="PreserveNewest"
@@ -35,7 +41,7 @@
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(FlowNotePublishProfile)' != 'SecurityPc'">
+  <ItemGroup Condition="'$(FlowNotePublishProfile)' != 'SecurityPc' And '$(FlowNotePublishProfile)' != 'Core'">
     <Content Include="..\..\fixtures\v3\**\*"
              Link="fixtures\v3\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"

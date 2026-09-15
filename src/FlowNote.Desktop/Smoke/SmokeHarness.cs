@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using FlowNote.Core.Assist;
 using FlowNote.Core.Models;
 using FlowNote.Core.Rules;
 using FlowNote.Desktop.Controls;
@@ -102,6 +103,19 @@ internal sealed class SmokeHarness
 
             await _floatingVm.SaveNoteAsync();
             await TraceAsync("saved-korean status=" + _floatingVm.StatusText + " err=" + _floatingVm.ErrorText);
+            if (_floatingVm.RecentRows.All(static row => row.Title.Contains("보드 전원", StringComparison.Ordinal) == false))
+            {
+                _failed.Add("저장 직후 최근 목록에 본문이 없습니다.");
+            }
+
+            if (_floatingVm.PanelKind != CapsulePanelKind.Recent)
+            {
+                _failed.Add("첫 기록 뒤 기억판이 열리지 않았습니다.");
+            }
+
+            await WaitForLayoutAsync();
+            WindowCapture.Save(_floating, Path.Combine(_outputDir, "03-board-after-save.png"));
+            TryScreen(_floating, "03-board-after-save-screen.png");
             if (_floatingVm.HasError || !_floatingVm.StatusText.Contains("기록됨", StringComparison.Ordinal))
             {
                 _failed.Add("한글 메모 저장 실패: " + _floatingVm.StatusText + " / " + _floatingVm.ErrorText);
@@ -126,14 +140,114 @@ internal sealed class SmokeHarness
 
             await _floatingVm.SaveNoteAsync();
             await TraceAsync("saved-image-only");
+            if (_floatingVm.RecentRows.All(static row => string.IsNullOrWhiteSpace(row.ImagePath)))
+            {
+                _failed.Add("사진만 저장한 기록이 최근 목록에 없습니다.");
+            }
+
+            var clipPng = Path.Combine(_session.Database.Paths.StagingDirectory, "clip-preview.png");
+            WritePreviewPng(clipPng);
+            var excelPaste = new DataObject();
+            excelPaste.SetData("XML Spreadsheet", """
+                <?xml version="1.0"?>
+                <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet">
+                  <Worksheet ss:Name="Sheet1"/>
+                </Workbook>
+                """);
+            excelPaste.SetData(DataFormats.UnicodeText, "A\tB\n1\t2");
+            excelPaste.SetData("PNG", File.ReadAllBytes(clipPng));
+            _floatingVm.Body = "남겨야 할 메모";
+            if (!_floating.TryImportPaste(excelPaste))
+            {
+                _failed.Add("엑셀 원형 붙여넣기를 처리하지 못했습니다.");
+            }
+
+            if (!_floatingVm.PendingFiles.Any(static file => file.OriginalName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)))
+            {
+                _failed.Add("엑셀 원형이 첨부로 들어오지 않았습니다.");
+            }
+
+            if (_floatingVm.PendingFiles.Any(static file => file.OriginalName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+            {
+                _failed.Add("엑셀 붙여넣기가 그림만 남겼습니다.");
+            }
+
+            if (_floatingVm.Body != "남겨야 할 메모")
+            {
+                _failed.Add("엑셀 붙여넣기가 기존 입력을 바꿨습니다: " + _floatingVm.Body);
+            }
+
+            foreach (var pending in _floatingVm.PendingFiles.ToList())
+            {
+                _floatingVm.RemovePending(pending);
+            }
+
+            _floatingVm.Body = "";
+            var imagePaste = new DataObject();
+            imagePaste.SetData("PNG", File.ReadAllBytes(clipPng));
+            if (!_floating.TryImportPaste(imagePaste))
+            {
+                _failed.Add("이미지 붙여넣기를 처리하지 못했습니다.");
+            }
+
+            if (!_floatingVm.PendingFiles.Any(static file => file.MediaType == "image/png"))
+            {
+                _failed.Add("이미지 붙여넣기가 첨부가 되지 않았습니다.");
+            }
+
+            foreach (var pending in _floatingVm.PendingFiles.ToList())
+            {
+                _floatingVm.RemovePending(pending);
+            }
+
+            _floatingVm.Body = "";
+            _floatingVm.SetPanel(CapsulePanelKind.None);
 
             _floatingVm.Body = "세 번째 짧은 기록";
             await _floatingVm.SaveNoteAsync();
-            _floatingVm.TogglePanel(CapsulePanelKind.Recent);
+            _floatingVm.Body = "네 번째 짧은 기록";
+            await _floatingVm.SaveNoteAsync();
+            if (_floatingVm.RecentRows.Count != 3)
+            {
+                _failed.Add("최근 목록이 3개를 넘거나 비었습니다: " + _floatingVm.RecentRows.Count);
+            }
+
+            if (_floatingVm.RecentRows.All(static row => row.Title != "네 번째 짧은 기록"))
+            {
+                _failed.Add("방금 저장한 네 번째 기록이 최근 목록 앞에 없습니다.");
+            }
+
+            var storedNotes = (await _session.Database.Entries.ListForLocalDateAsync(todayDate))
+                .Count(static entry => entry.DeletedAtUtc is null
+                    && (entry.Kind == EntryKind.Note || entry.Kind == EntryKind.TaskCompleted));
+            if (storedNotes <= 3)
+            {
+                _failed.Add("최근 3개 제한이 원본까지 줄인 것으로 보입니다: " + storedNotes);
+            }
+
             await WaitForLayoutAsync();
             TryScreen(_floating, "04-recent-3.png");
             WindowCapture.Save(_floating, Path.Combine(_outputDir, "04-recent-3-rtt.png"));
-            _floatingVm.SetPanel(CapsulePanelKind.None);
+            var pinTarget = _floatingVm.RecentRows.FirstOrDefault(static row => row.Title == "세 번째 짧은 기록")
+                ?? _floatingVm.RecentRows.Last();
+            _floatingVm.OpenRecentEntry(pinTarget);
+            _floatingVm.PinPeekCommand.Execute(null);
+            var pinnedTitle = _floatingVm.PinnedTitle;
+            _floatingVm.ClosePeekCommand.Execute(null);
+            _floatingVm.Body = "고정은 그대로";
+            await _floatingVm.SaveNoteAsync();
+            if (_floatingVm.PinnedTitle != pinnedTitle)
+            {
+                _failed.Add("새 기록이 고정 대상을 바꿨습니다.");
+            }
+
+            await WaitForLayoutAsync();
+            WindowCapture.Save(_floating, Path.Combine(_outputDir, "04-board-pinned.png"));
+            _floatingVm.CollapseBoardCommand.Execute(null);
+            if (!_session.BoardCollapsed)
+            {
+                _failed.Add("접기 상태가 저장되지 않았습니다.");
+            }
 
             _floatingVm.WorkItemTitle = "할 일 하나";
             await _floatingVm.AddWorkItemAsync();
@@ -225,6 +339,7 @@ internal sealed class SmokeHarness
             }
 
             WindowCapture.Save(_main, Path.Combine(_outputDir, "09-main-panorama.png"));
+            await VerifyAbFlowAsync();
             _session.SetViewMode(TimelineViewMode.Chronological);
             await WaitForLayoutAsync();
             WindowCapture.Save(_main, Path.Combine(_outputDir, "10-main-chronological.png"));
@@ -312,7 +427,7 @@ internal sealed class SmokeHarness
             completedId={completed!.Id}
             attachment={attachments[0].OriginalName}
             entries={today.Count}
-            smokeScope=capsule-idle,korean-note,log+image,image-only,too-long-fail-retry,complete,undo-reopen,complete-again,chrono/bywork/panorama,detail-close,narrow-width,rtt-capture,screen-capture-attempt,capsule-520x52
+            smokeScope=capsule-idle,korean-note,board-after-save,log+image,image-only-recent,clipboard-excel-original,clipboard-png,too-long-fail-retry,recent-3-keep-originals,pin-unchanged,collapse-persist,complete,undo-reopen,complete-again,chrono/bywork/panorama,ab-unlabeled-flow,detail-close,narrow-width,rtt-capture,screen-capture-attempt,capsule-520x52
             notes={string.Join(" | ", _notes)}
             """);
         return 0;
@@ -493,6 +608,148 @@ internal sealed class SmokeHarness
         using var graphics = System.Drawing.Graphics.FromImage(bitmap);
         graphics.Clear(System.Drawing.Color.FromArgb(255, 29, 122, 80));
         bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+    }
+
+    private async Task VerifyAbFlowAsync()
+    {
+        var zone = _session.Database.DisplayTimeZone.TimeZone;
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).DateTime);
+        DateTimeOffset At(int hour, int minute)
+        {
+            var local = DateTime.SpecifyKind(today.ToDateTime(new TimeOnly(hour, minute)), DateTimeKind.Unspecified);
+            return new DateTimeOffset(local, zone.GetUtcOffset(local));
+        }
+
+        var script = new (string RequestId, int Hour, int Minute, string Body)[]
+        {
+            ("ab-1", 9, 0, "인버터 과전류 확인 중"),
+            ("ab-2", 9, 20, "코스표 검토 요청 들어옴. 나중에 보기"),
+            ("ab-3", 9, 45, "초기화 순서 확인"),
+            ("ab-4", 10, 10, "순서 변경 후 재현 안 됨"),
+            ("ab-5", 10, 15, "아까 받은 코스표 검토 시작"),
+            ("ab-6", 11, 0, "인버터 조건 하나 더 확인"),
+            ("ab-x", 11, 30, "확인")
+        };
+        foreach (var note in script)
+        {
+            await _session.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+            {
+                RequestId = note.RequestId,
+                Body = note.Body,
+                OccurredAtUtc = At(note.Hour, note.Minute)
+            });
+        }
+
+        await WaitAssistIdleAsync();
+        _session.NotifyDataChanged();
+        _session.SetViewMode(TimelineViewMode.Panorama);
+        await WaitForLayoutAsync();
+
+        var flow = _mainVm.PanoramaSegments.Where(static item => item.IsEpisode).ToList();
+        var inverter = flow.Where(static item => item.Title.Contains("인버터", StringComparison.Ordinal)).ToList();
+        var course = flow.Where(static item => item.Title.Contains("코스표", StringComparison.Ordinal)).ToList();
+        if (inverter.Count != 2 || course.Count != 1)
+        {
+            _failed.Add($"A/B 구간 inverter={inverter.Count} course={course.Count} summary={_mainVm.PanoramaSummary}");
+        }
+        else if (inverter[0].ThreadId != inverter[1].ThreadId)
+        {
+            _failed.Add("처음과 마지막 인버터 구간이 다른 업무로 나뉘었습니다.");
+        }
+        else if (inverter[0].ThreadId == course[0].ThreadId)
+        {
+            _failed.Add("코스표 수행이 인버터 구간과 같은 업무로 붙었습니다.");
+        }
+
+        if (!_mainVm.PanoramaSegments.Any(static item =>
+                item.IsRequest && item.Title.Contains("코스표", StringComparison.Ordinal)))
+        {
+            _failed.Add("코스표 요청 마커가 파노라마에 없습니다.");
+        }
+
+        var summaryHasFlow = _mainVm.PanoramaSummary.Contains("인버터", StringComparison.Ordinal)
+            && _mainVm.PanoramaSummary.Contains("코스표", StringComparison.Ordinal)
+            && _mainVm.PanoramaSummary.Contains('→');
+        if (!summaryHasFlow)
+        {
+            _failed.Add("파노라마 요약이 전환 순서를 보여 주지 않습니다: " + _mainVm.PanoramaSummary);
+        }
+
+        var screen = string.Join('\n', new[] { _mainVm.PanoramaSummary }.Concat(_mainVm.PanoramaSegments.Select(static item =>
+            item.Title + item.TimeLabel + item.CountLabel + item.StatusLabel)));
+        foreach (var banned in new[] { "70분", "근무시간", "점심", "집중시간", "생산성" })
+        {
+            if (screen.Contains(banned, StringComparison.Ordinal))
+            {
+                _failed.Add("파노라마에 금지 문구가 있습니다: " + banned);
+            }
+        }
+
+        var dayEntries = await _session.Database.Entries.ListForLocalDateAsync(today);
+        if (dayEntries.Any(static item => item.Kind == EntryKind.TaskCompleted && item.Body.Contains("재현 안 됨", StringComparison.Ordinal)))
+        {
+            _failed.Add("재현 안 됨을 공식 완료로 바꿨습니다.");
+        }
+
+        if (inverter.Count > 0)
+        {
+            inverter[0].IsExpanded = true;
+            var original = inverter[0].Notes.FirstOrDefault();
+            if (original is not null)
+            {
+                _mainVm.Select(original);
+            }
+        }
+
+        await WaitForLayoutAsync();
+        WindowCapture.Save(_main, Path.Combine(_outputDir, "12-panorama-ab.png"));
+        WindowCapture.Save(_main, Path.Combine(_outputDir, "13-panorama-expanded.png"));
+        TryScreen(_main, "12-panorama-ab-screen.png");
+
+        var toClear = dayEntries.FirstOrDefault(static item => item.Body == "초기화 순서 확인");
+        if (toClear is null)
+        {
+            _failed.Add("연결 수정에 쓸 초기화 순서 기록이 없습니다.");
+        }
+        else
+        {
+            _session.SelectEntry(toClear.Id);
+            _mainVm.ClearAssistCommand.Execute(null);
+            await WaitAssistIdleAsync();
+            _session.NotifyDataChanged();
+            await WaitForLayoutAsync();
+            var kept = _session.Database.Assist.GetAssignment(toClear.Id);
+            if (kept is not { Resolution: AssignmentResolution.ManualClear, UserLocked: true })
+            {
+                _failed.Add("잘못된 연결을 해제한 뒤 보존되지 않았습니다.");
+            }
+        }
+
+        WindowCapture.Save(_main, Path.Combine(_outputDir, "14-panorama-unlinked.png"));
+        _mainVm.CloseDetail();
+    }
+
+    private async Task WaitAssistIdleAsync()
+    {
+        var zone = _session.Database.DisplayTimeZone.TimeZone;
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).DateTime);
+        for (var i = 0; i < 80; i++)
+        {
+            var entries = await _session.Database.Entries.ListForLocalDateAsync(today);
+            var busy = entries.Any(item =>
+            {
+                var job = _session.Database.Assist.LatestJob(item.Id);
+                return job is { Status: AnalysisJobStatus.Pending or AnalysisJobStatus.Running or AnalysisJobStatus.RetryWait };
+            });
+            if (!busy)
+            {
+                return;
+            }
+
+            await Task.Delay(100);
+        }
+
+        _failed.Add("분석 대기열이 비지 않았습니다.");
     }
 
     private static async Task WaitForLayoutAsync()

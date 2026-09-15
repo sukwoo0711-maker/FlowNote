@@ -1,0 +1,6 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Current mark: pause-dot + ink ribbon. Not a letter. -->
+    <Geometry x:Key="BrandDotGeometry">M 5.4,15.2 A 1.7,1.7 0 1 1 5.4,18.6 A 1.7,1.7 0 1 1 5.4,15.2 Z</Geometry>
+    <Geometry x:Key="BrandCurrentGeometry">M 7.4,16.4 C 10.4,12.2 13.2,14.8 15.8,10.1 C 17.5,7.2 20.2,7.8 21.6,6</Geometry>
+</ResourceDictionary>

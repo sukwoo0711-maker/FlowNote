@@ -130,6 +130,25 @@ public sealed class SqliteEntryService : IEntryService
         });
     }
 
+    public IReadOnlyList<TimelineEntry> ListRecentVisible(int count)
+    {
+        var take = Math.Max(0, count);
+        return _executor.Read(connection =>
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = $"""
+                SELECT {EntryColumns}
+                FROM entries
+                WHERE deleted_at_utc IS NULL
+                  AND kind IN ('note', 'task_completed')
+                ORDER BY recorded_at_utc DESC, seq DESC
+                LIMIT $take;
+                """;
+            command.Parameters.AddWithValue("$take", take);
+            return ReadAll(command);
+        });
+    }
+
     public Task<IReadOnlyList<TimelineEntry>> ListForLocalDateAsync(DateOnly localDate, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

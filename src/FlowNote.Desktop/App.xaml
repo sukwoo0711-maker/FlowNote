@@ -9,24 +9,65 @@
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
             <converters:BoolToHiddenVisibilityConverter x:Key="BoolToHidden"/>
             <converters:BoolToGridLengthConverter x:Key="DetailColumnWidth" TrueWidth="320"/>
-            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F5F7F9"/>
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
-            <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#E5F3F1"/>
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172B32"/>
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#53676D"/>
-            <SolidColorBrush x:Key="AccentBrush" Color="#126B65"/>
-            <SolidColorBrush x:Key="AccentSoftBrush" Color="#E5F3F1"/>
-            <SolidColorBrush x:Key="SuccessBrush" Color="#1D7A50"/>
+
+            <Color x:Key="InkColor">#1A1F22</Color>
+            <Color x:Key="PaperColor">#EDE8E1</Color>
+            <Color x:Key="GlassColor">#CCF7F4EE</Color>
+            <Color x:Key="BronzeColor">#8A6A3D</Color>
+            <Color x:Key="ChampagneColor">#D4B896</Color>
+
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#59EDE8E1"/>
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#73F7F4EE"/>
+            <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#66E8E0D4"/>
+            <SolidColorBrush x:Key="GlassBrush" Color="#8CF7F4EE"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1C1C1E"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#636366"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#8A6A3D"/>
+            <SolidColorBrush x:Key="AccentSoftBrush" Color="#66F0E6D4"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#3D7A5C"/>
+            <SolidColorBrush x:Key="LiveDotBrush" Color="#34C759"/>
             <SolidColorBrush x:Key="DangerBrush" Color="#B42318"/>
-            <SolidColorBrush x:Key="BorderBrushToken" Color="#DCE5E8"/>
+            <SolidColorBrush x:Key="BorderBrushToken" Color="#73FFFFFF"/>
+            <SolidColorBrush x:Key="HairlineBrush" Color="#59FFFFFF"/>
+            <SolidColorBrush x:Key="FocusRingBrush" Color="#1C1C1E"/>
+            <SolidColorBrush x:Key="OnAccentBrush" Color="#F7F4EE"/>
+
+            <LinearGradientBrush x:Key="GlassCardBrush" StartPoint="0.08,0" EndPoint="0.92,1">
+                <GradientStop Color="#B8FFFFFF" Offset="0"/>
+                <GradientStop Color="#73F7F4EE" Offset="0.55"/>
+                <GradientStop Color="#59EFE8DC" Offset="1"/>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="InkButtonBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                <GradientStop Color="#2A3236" Offset="0"/>
+                <GradientStop Color="#1A1F22" Offset="1"/>
+            </LinearGradientBrush>
+
+            <Style x:Key="GlassCard" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource GlassCardBrush}"/>
+                <Setter Property="BorderBrush" Value="#8CFFFFFF"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="20"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+            </Style>
+            <Style x:Key="RaisedGlass" TargetType="Border" BasedOn="{StaticResource GlassCard}">
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="28" ShadowDepth="6" Direction="270" Opacity="0.10" Color="#1A1F22"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style TargetType="Button">
                 <Setter Property="MinHeight" Value="36"/>
-                <Setter Property="Padding" Value="12,6"/>
-                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Padding" Value="14,7"/>
+                <Setter Property="Background" Value="{StaticResource InkButtonBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}"/>
+                <Setter Property="BorderBrush" Value="#40D4B896"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -34,22 +75,31 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="8"
-                                    Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    CornerRadius="18"
+                                    Padding="{TemplateBinding Padding}"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Bd" Property="Opacity" Value="0.92"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#80D4B896"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.84"/>
+                                    <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
+                                    <Setter TargetName="Bd" Property="RenderTransform">
+                                        <Setter.Value>
+                                            <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+                                        </Setter.Value>
+                                    </Setter>
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                                    <Setter TargetName="Bd" Property="Opacity" Value="0.42"/>
                                 </Trigger>
                                 <Trigger Property="IsKeyboardFocused" Value="True">
-                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#172033"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource FocusRingBrush}"/>
                                     <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -58,17 +108,49 @@
                 </Setter>
             </Style>
             <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                <Setter Property="Background" Value="{StaticResource GlassCardBrush}"/>
                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
-                <Setter Property="BorderBrush" Value="{StaticResource BorderBrushToken}"/>
-                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderBrush" Value="#73FFFFFF"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+            <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="FontWeight" Value="Medium"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
             </Style>
             <Style TargetType="TextBox">
-                <Setter Property="BorderBrush" Value="{StaticResource BorderBrushToken}"/>
+                <Setter Property="BorderBrush" Value="#73FFFFFF"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Background" Value="White"/>
-                <Setter Property="Padding" Value="8,6"/>
+                <Setter Property="Background" Value="#E6FFFFFF"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}"/>
+                <Setter Property="Padding" Value="10,8"/>
                 <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="14"
+                                    Padding="{TemplateBinding Padding}">
+                                <ScrollViewer x:Name="PART_ContentHost"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#A6D4B896"/>
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                    <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
             <Style TargetType="ListBoxItem">
                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -85,6 +167,9 @@
                 </Setter>
             </Style>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Brand.xaml"/>
+                <ResourceDictionary Source="Themes/CommandIcons.xaml"/>
+                <ResourceDictionary Source="Themes/Chrome.xaml"/>
                 <ResourceDictionary Source="Themes/ComponentTemplates.xaml"/>
                 <ResourceDictionary Source="Themes/FloatingCapsule.xaml"/>
             </ResourceDictionary.MergedDictionaries>
