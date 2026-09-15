@@ -1,0 +1,28 @@
+<UserControl x:Class="FlowNote.Desktop.Controls.AttachmentTile"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             AutomationProperties.Name="첨부">
+    <Border Background="{StaticResource SurfaceMutedBrush}" CornerRadius="8" Padding="8" Margin="0,0,8,8">
+        <DockPanel>
+            <Button x:Name="RemoveButton"
+                    DockPanel.Dock="Right"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="제거"
+                    MinHeight="32"
+                    MinWidth="32"
+                    Padding="8,4"
+                    Click="OnRemoveClick"
+                    AutomationProperties.Name="첨부 제거"/>
+            <Image x:Name="Thumb" Width="56" Height="40" Margin="0,0,8,0" Stretch="UniformToFill" Visibility="Collapsed"/>
+            <Path x:Name="FileGlyph" Width="18" Height="18" Margin="0,0,8,0" Stretch="Uniform"
+                  Fill="{StaticResource TextSecondaryBrush}"
+                  Data="M4,2 H12 L16,6 V18 H4 Z M12,2 V6 H16"
+                  VerticalAlignment="Center"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="NameText" FontSize="13" TextWrapping="Wrap"/>
+                <TextBlock x:Name="MetaText" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                <TextBlock x:Name="FailText" FontSize="12" Foreground="{StaticResource DangerBrush}" Visibility="Collapsed"/>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</UserControl>

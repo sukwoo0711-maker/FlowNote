@@ -1,0 +1,79 @@
+{
+  "purpose": "V3 구현용 기본 설계값. 런타임 테마 엔진을 추가하지 말 것.",
+  "unit": "DIP",
+  "capsule": {
+    "width": 520,
+    "height": 52,
+    "radius": 26,
+    "horizontal_padding": 12,
+    "work_chip_max_width": 88,
+    "panel_gap": 6,
+    "panel_width": 480,
+    "preview_total_max_height": 240,
+    "editor_total_max_height": 320,
+    "text_size": 13,
+    "action_hitbox": 32
+  },
+  "main": {
+    "initial_width": 1280,
+    "initial_height": 820,
+    "nav_width": 168,
+    "nav_rail_width": 56,
+    "outer_spacing": 24,
+    "time_column": 56,
+    "node_column": 24,
+    "flow_max_width": 800,
+    "card_max_width": 720,
+    "detail_width": 352,
+    "minimum_center_before_overlay": 560,
+    "nav_collapse_below": 1000,
+    "image_preview_max_width": 320,
+    "image_preview_max_height": 180
+  },
+  "colors": {
+    "main_background": "#F5F7F9",
+    "surface": "#FFFFFF",
+    "text": "#172B32",
+    "text_secondary": "#53676D",
+    "accent_on_light": "#126B65",
+    "accent_soft": "#E5F3F1",
+    "border": "#DCE5E8",
+    "capsule_start_argb": "#EB29464B",
+    "capsule_end_argb": "#F0374553",
+    "capsule_panel_argb": "#F01D343C",
+    "capsule_text": "#F2F6F8",
+    "capsule_accent": "#55CFC7"
+  },
+  "typography": {
+    "body": 14,
+    "metadata_min": 12,
+    "card_title_min": 15,
+    "card_title_max": 16,
+    "main_title": 22,
+    "line_height_min": 20,
+    "line_height_max": 22
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "radius": {
+    "card": 12,
+    "capsule_panel": 14
+  },
+  "next_action": {
+    "max_chars": 200,
+    "current_per_work_item": 1,
+    "required": false
+  },
+  "rules": [
+    "가용 작업 영역에 맞출 것",
+    "전체 Viewbox 축소 금지",
+    "실제 본창과 같은 컴포넌트를 쓸 것",
+    "최소 대비/포커스/상태를 실제로 검수할 것"
+  ]
+}

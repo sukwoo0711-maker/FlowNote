@@ -1,0 +1,17 @@
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+artifacts/
+TestResults/
+*.log
+*.DotSettings.user
+.idea/
+*.nupkg
+project.lock.json
+!**/packages.lock.json

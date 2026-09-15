@@ -1,0 +1,98 @@
+<UserControl x:Class="FlowNote.Desktop.Controls.QuickCaptureComposer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:FlowNote.Desktop.Controls"
+             Padding="16"
+             AutomationProperties.Name="빠른 기록">
+    <StackPanel>
+        <Grid>
+            <TextBox x:Name="BodyBox"
+                     MinHeight="80"
+                     MaxHeight="160"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     Padding="10,8"
+                     VerticalContentAlignment="Top"
+                     BorderThickness="0"
+                     Background="{StaticResource SurfaceMutedBrush}"
+                     Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
+                     TextChanged="OnBodyChanged"
+                     AutomationProperties.Name="메모 본문">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter Property="BorderThickness" Value="2"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+            <TextBlock x:Name="Placeholder"
+                       Margin="12,10,12,0"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       IsHitTestVisible="False"
+                       Text="지금 남겨둘 내용이 있나요?"/>
+        </Grid>
+        <TextBlock Margin="0,8,0,0"
+                   FontSize="12"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Text="이미지 붙여넣기 · 파일 끌어놓기"/>
+        <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding PendingFiles}">
+            <ItemsControl.Style>
+                <Style TargetType="ItemsControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasPendingFiles}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ItemsControl.Style>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <controls:AttachmentTile MinWidth="240" MaxWidth="320" RemoveRequested="OnTileRemove"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Margin="0,8,0,0" Foreground="{StaticResource DangerBrush}" Text="{Binding ErrorText}" TextWrapping="Wrap">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+        <DockPanel Margin="0,12,0,0">
+            <Button DockPanel.Dock="Right"
+                    Content="{Binding SaveLabel}"
+                    Command="{Binding SaveNoteCommand}"
+                    AutomationProperties.Name="기록"/>
+            <Button DockPanel.Dock="Right"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="첨부"
+                    Click="OnAttachClick"
+                    Margin="0,0,8,0"
+                    IsEnabled="{Binding IsIdle}"
+                    AutomationProperties.Name="첨부"/>
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="{Binding StatusText}"
+                       TextWrapping="Wrap"/>
+        </DockPanel>
+    </StackPanel>
+</UserControl>

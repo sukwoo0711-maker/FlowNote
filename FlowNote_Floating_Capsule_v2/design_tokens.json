@@ -1,0 +1,77 @@
+{
+  "version": "2.0",
+  "scope": "floating-only",
+  "unit": "DIP",
+  "status": "Implementation design values; not a tested application or measured performance result.",
+  "capsule": {
+    "surface_width": 520,
+    "surface_height": 52,
+    "corner_radius": 26,
+    "padding_x": 12,
+    "outer_shadow_gutter_max": 8,
+    "grid_columns": [
+      28,
+      8,
+      "*",
+      32,
+      4,
+      32,
+      32,
+      64,
+      32
+    ],
+    "input_font_size": 13,
+    "icon_size": 18,
+    "icon_hitbox": 32,
+    "has_native_titlebar": false,
+    "has_default_multiline_editor": false
+  },
+  "panel": {
+    "right_aligned": true,
+    "width_inset_from_capsule": 40,
+    "gap": 6,
+    "corner_radius": 14,
+    "padding": [
+      12,
+      8,
+      12,
+      10
+    ],
+    "header_height": 24,
+    "header_gap": 4,
+    "row_height": 28,
+    "preview_rows": 3,
+    "max_total_visible_height_preview": 240,
+    "max_total_visible_height_edit": 320
+  },
+  "colors_argb": {
+    "CapsuleTintStart": "#EB29464B",
+    "CapsuleTintEnd": "#F0374553",
+    "PanelBackground": "#F01D343C",
+    "OpaqueFallback": "#FF263D45",
+    "BorderHighlight": "#4DDFEDF2",
+    "TextPrimary": "#FFF2F6F8",
+    "TextSecondary": "#FFB9CCD4",
+    "IconNormal": "#FFD1E0E7",
+    "Accent": "#FF55CFC7",
+    "Completed": "#FF75D5B0",
+    "Error": "#FFFFB4AB",
+    "HoverSurface": "#14FFFFFF",
+    "PressedSurface": "#24FFFFFF"
+  },
+  "defaults": {
+    "panel_kind": "None",
+    "input_mode": "SingleLine",
+    "new_user_topmost": true,
+    "new_user_pinned_preview": "None",
+    "existing_hotkey": "preserve-and-validate",
+    "real_backdrop_blur": "not-required",
+    "opacity_applies_to": "background brushes only"
+  },
+  "performance_targets_not_measured": {
+    "idle_seconds": 60,
+    "idle_cpu_machine_capacity_percent_max": 1,
+    "warm_show_p95_ms": 200,
+    "working_set_mib_capsule_only_goal": 120
+  }
+}

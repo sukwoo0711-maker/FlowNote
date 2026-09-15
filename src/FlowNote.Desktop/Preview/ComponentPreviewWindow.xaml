@@ -1,0 +1,81 @@
+<Window x:Class="FlowNote.Desktop.Preview.ComponentPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FlowNote.Desktop.Controls"
+        Title="FlowNote 컴포넌트 프리뷰"
+        Width="520"
+        Height="1480"
+        MinWidth="400"
+        MinHeight="480"
+        Background="{StaticResource AppBackgroundBrush}"
+        FontFamily="Malgun Gothic, Segoe UI"
+        FontSize="14"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        AutomationProperties.Name="FlowNote 컴포넌트 프리뷰">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border x:Name="PreviewRoot" Background="{StaticResource AppBackgroundBrush}" Padding="24">
+        <StackPanel>
+            <TextBlock FontSize="22" FontWeight="SemiBold" Text="공유 컴포넌트 표본"/>
+            <TextBlock Margin="0,4,0,16" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                       Text="합성 fixture. 운영 DB를 열지 않습니다. 제품과 같은 UserControl을 360 DIP 폭으로 둡니다."/>
+
+            <TextBlock FontWeight="SemiBold" Margin="0,0,0,8" Text="QuickCaptureComposer · 360 DIP"/>
+            <StackPanel>
+                <Border Width="360" HorizontalAlignment="Left" Margin="0,0,0,12" Background="{StaticResource SurfaceBrush}" CornerRadius="12">
+                    <StackPanel>
+                        <TextBlock Margin="16,12,16,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Text="기본(빈 입력)"/>
+                        <controls:QuickCaptureComposer Width="360" DataContext="{Binding EmptyComposer}"/>
+                    </StackPanel>
+                </Border>
+                <Border Width="360" HorizontalAlignment="Left" Margin="0,0,0,12" Background="{StaticResource SurfaceBrush}" CornerRadius="12">
+                    <StackPanel>
+                        <TextBlock Margin="16,12,16,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Text="입력"/>
+                        <controls:QuickCaptureComposer Width="360" DataContext="{Binding InputComposer}"/>
+                    </StackPanel>
+                </Border>
+                <Border Width="360" HorizontalAlignment="Left" Margin="0,0,0,12" Background="{StaticResource SurfaceBrush}" CornerRadius="12">
+                    <StackPanel>
+                        <TextBlock Margin="16,12,16,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Text="첨부"/>
+                        <controls:QuickCaptureComposer Width="360" DataContext="{Binding AttachmentComposer}"/>
+                    </StackPanel>
+                </Border>
+                <Border Width="360" HorizontalAlignment="Left" Margin="0,0,0,12" Background="{StaticResource SurfaceBrush}" CornerRadius="12">
+                    <StackPanel>
+                        <TextBlock Margin="16,12,16,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Text="오류"/>
+                        <controls:QuickCaptureComposer Width="360" DataContext="{Binding ErrorComposer}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <TextBlock FontWeight="SemiBold" Margin="0,8,0,8" Text="WorkItemRow"/>
+            <Border Width="360" HorizontalAlignment="Left" Padding="12" Background="{StaticResource SurfaceBrush}" CornerRadius="12">
+                <ItemsControl ItemsSource="{Binding WorkItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:WorkItemRow/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <TextBlock FontWeight="SemiBold" Margin="0,16,0,8" Text="TimelineEntryCard"/>
+            <ItemsControl Width="360" HorizontalAlignment="Left" ItemsSource="{Binding EntryCards}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <controls:TimelineEntryCard/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock FontWeight="SemiBold" Margin="0,16,0,8" Text="TimelineEventRow"/>
+            <ItemsControl Width="360" HorizontalAlignment="Left" ItemsSource="{Binding EventRows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <controls:TimelineEventRow/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+        </Border>
+    </ScrollViewer>
+</Window>

@@ -1,0 +1,7 @@
+PASS
+noteId=01063dc9-e04e-46e6-9b20-521602e7cb05
+completedId=13be508d-86a6-46b9-914b-a72adc871b11
+attachment=smoke-note.txt
+entries=16
+smokeScope=capsule-idle,korean-note,log+image,image-only,too-long-fail-retry,complete,undo-reopen,complete-again,chrono/bywork/panorama,detail-close,narrow-width,rtt-capture,screen-capture-attempt,capsule-520x52
+notes=

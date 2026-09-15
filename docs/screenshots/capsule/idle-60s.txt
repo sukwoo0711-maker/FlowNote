@@ -1,0 +1,11 @@
+﻿process=FlowNote.Desktop
+pid=113428
+logicalProcessors=16
+idleWallMs=60021
+cpuDeltaMs=0
+idleCpuPercentOfMachine=0
+workingSetStartBytes=131608576
+workingSetEndBytes=131497984
+privateStartBytes=85573632
+privateEndBytes=85237760
+note=Main window is also open; this is not floating-only memory.

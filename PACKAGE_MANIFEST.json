@@ -1,0 +1,55 @@
+{
+  "package": "FlowNote Desktop implementation brief",
+  "version": "1.0",
+  "date": "2026-09-14",
+  "status": "Specification only; application not implemented",
+  "tests_planned": 76,
+  "phases": 14,
+  "files": [
+    {
+      "path": "00_READ_FIRST.md",
+      "bytes": 2954,
+      "sha256": "9da3bfe087066f481f97679d0e409d24d8fe649ad68cf9a4feb076828871d86e"
+    },
+    {
+      "path": "01_MASTER_IMPLEMENTATION_PROMPT.md",
+      "bytes": 57176,
+      "sha256": "7602d624abeb805c51277fd8f9f08bbf3de4c6ef8d4917d5ce3e97ad17778cba"
+    },
+    {
+      "path": "02_PHASE_BY_PHASE_PROMPTS.md",
+      "bytes": 15523,
+      "sha256": "8fcb28e9aa1d1dd30c8d3b4127552e69e64d69bfd2b73e1f3be09e4a89a7eaf6"
+    },
+    {
+      "path": "03_ACCEPTANCE_TESTS.md",
+      "bytes": 15418,
+      "sha256": "a03a39163831fa8756e3d3836d5ebc8d5abbfc3640b9b8e86c05b5e17050a81c"
+    },
+    {
+      "path": "04_START_WORKER_PROMPT.md",
+      "bytes": 3488,
+      "sha256": "4bb5e3a6f5eb09ea5ef79689a6a6652d8cc50b5bfbd559557f347715b85f3fda"
+    },
+    {
+      "path": "05_TECHNICAL_REFERENCES.md",
+      "bytes": 3412,
+      "sha256": "59da260ae5831df108629366da1f464da92e32cbdbdd924a497fb21cd98c15e7"
+    },
+    {
+      "path": "references/01_product_overview.png",
+      "bytes": 1754536,
+      "sha256": "62d591d39f03e5003f24db5486aca1c6621d36cff4eaf78aec648a37237b435f"
+    },
+    {
+      "path": "references/02_timeline_concepts.png",
+      "bytes": 1699066,
+      "sha256": "43ec83e6ea0decc6f2f5f01dbeebff66eb3db1ffc16a67500a7ac7c1af3e57dd"
+    },
+    {
+      "path": "references/03_timeline_variations.png",
+      "bytes": 1730069,
+      "sha256": "290369c7eefdc91ea7bde78bdc950d8db223697d9625a69b38d88ea060210d34"
+    }
+  ]
+}

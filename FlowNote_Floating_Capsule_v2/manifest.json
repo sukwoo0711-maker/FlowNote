@@ -1,0 +1,45 @@
+{
+  "package": "FlowNote Floating Capsule v2.0",
+  "kind": "implementation specification; not an executable app",
+  "references": {
+    "references/01_REJECTED_tall_notepad.png": "User-provided current output (rejected UI structure)",
+    "references/02_TARGET_floating_capsule.png": "User-provided target concept (design reference, not implementation evidence)"
+  },
+  "files": [
+    {
+      "path": "00_START_HERE.md",
+      "bytes": 4601,
+      "sha256": "5cfbc5ca646cad5b4ec6c5be156e8ca572e9b4c569d20d26d58f8033c7497765"
+    },
+    {
+      "path": "01_FLOATING_CAPSULE_OVERRIDE.md",
+      "bytes": 28857,
+      "sha256": "4a6efc9c3f0222a605f6ab750d2ae6409b201354c3b5a457a783e51f949191eb"
+    },
+    {
+      "path": "02_ACCEPTANCE.md",
+      "bytes": 7267,
+      "sha256": "b2f04c010ab3eab55a77e056a2d2d0afc59ce8ba1b4c16898a9a5042fd5770e0"
+    },
+    {
+      "path": "03_TECHNICAL_NOTES.md",
+      "bytes": 3940,
+      "sha256": "9d51ad83efa1b3b99e9a5f4dc19e10c54124a8bedeae22125ddf646cfb1b2523"
+    },
+    {
+      "path": "design_tokens.json",
+      "bytes": 1876,
+      "sha256": "4f70b5570787947cfbdc7711d23f0da9dbab1078d0749385116f290a29a074b3"
+    },
+    {
+      "path": "references/01_REJECTED_tall_notepad.png",
+      "bytes": 17219,
+      "sha256": "adb39f9f81d50f2a5d3c9aa21655739b779522c6fc0a010d29948363c1b2fd1d"
+    },
+    {
+      "path": "references/02_TARGET_floating_capsule.png",
+      "bytes": 134344,
+      "sha256": "8a8af2a4f76fcc1f77be47ab60044e384e8de25b2d4d05dd841d33ac47a4058a"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="CapsuleTintStartColor">#EB29464B</Color>
+    <Color x:Key="CapsuleTintEndColor">#F0374553</Color>
+    <SolidColorBrush x:Key="CapsulePanelBrush" Color="#F01D343C"/>
+    <SolidColorBrush x:Key="CapsuleOpaqueBrush" Color="#FF263D45"/>
+    <SolidColorBrush x:Key="CapsuleBorderBrush" Color="#4DDFEDF2"/>
+    <SolidColorBrush x:Key="CapsuleTextPrimaryBrush" Color="#FFF2F6F8"/>
+    <SolidColorBrush x:Key="CapsuleTextSecondaryBrush" Color="#FFB9CCD4"/>
+    <SolidColorBrush x:Key="CapsuleIconBrush" Color="#FFD1E0E7"/>
+    <SolidColorBrush x:Key="CapsuleAccentBrush" Color="#FF55CFC7"/>
+    <SolidColorBrush x:Key="CapsuleCompletedBrush" Color="#FF75D5B0"/>
+    <SolidColorBrush x:Key="CapsuleErrorBrush" Color="#FFFFB4AB"/>
+    <SolidColorBrush x:Key="CapsuleHoverBrush" Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="CapsulePressedBrush" Color="#24FFFFFF"/>
+
+    <LinearGradientBrush x:Key="CapsuleSurfaceBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="{StaticResource CapsuleTintStartColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource CapsuleTintEndColor}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <Style x:Key="CapsuleIconButton" TargetType="Button">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="MinWidth" Value="32"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource CapsuleIconBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="8"
+                            BorderBrush="{StaticResource CapsuleAccentBrush}"
+                            BorderThickness="0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource CapsuleHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource CapsulePressedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="CapsuleTextButton" TargetType="Button" BasedOn="{StaticResource CapsuleIconButton}">
+        <Setter Property="Width" Value="Auto"/>
+        <Setter Property="MinWidth" Value="32"/>
+        <Setter Property="Padding" Value="6,0"/>
+        <Setter Property="Foreground" Value="{StaticResource CapsuleTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontFamily" Value="Malgun Gothic, Segoe UI"/>
+    </Style>
+
+    <Style x:Key="CapsuleTextBox" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource CapsuleTextPrimaryBrush}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource CapsuleAccentBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource CapsuleAccentBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontFamily" Value="Malgun Gothic, Segoe UI"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" BorderThickness="1" BorderBrush="Transparent">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="2,0"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource CapsuleAccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

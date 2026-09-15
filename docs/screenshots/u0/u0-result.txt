@@ -1,0 +1,4 @@
+PASS
+preview=u0-component-preview.png
+scope=composer-count-4,composer-width-360,empty-save-disabled,retry-label,no-complete-button,attach-not-file
+not-asserted=IME,multi-dpi,focus-vs-other-apps,beginner-usability

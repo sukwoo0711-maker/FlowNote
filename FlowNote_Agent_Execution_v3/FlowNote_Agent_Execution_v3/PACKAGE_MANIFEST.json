@@ -1,0 +1,90 @@
+{
+  "artifact": "instruction_package_not_application",
+  "files": [
+    {
+      "path": "00_START_AGENT.md",
+      "bytes": 5499,
+      "sha256": "93a797df9e5ae6eae078953edfc866b4ace470fff834cf198fa87f451ad5b7ab"
+    },
+    {
+      "path": "01_MASTER_WORK_ORDER.md",
+      "bytes": 37998,
+      "sha256": "ba3032b37161a2abce8b0771cfae3b91684f9d9e7e6a777d9a755bdaaebc468b"
+    },
+    {
+      "path": "02_ACCEPTANCE_TESTS.md",
+      "bytes": 14767,
+      "sha256": "146dfef4a3d86044c0301b4550a68f3c0dcb96fadee166f5c6455e254605704f"
+    },
+    {
+      "path": "03_VISUAL_CONTRACT.md",
+      "bytes": 9333,
+      "sha256": "145080426aa54c007e5e6fa75dbe571433d1d42d7c243a2699fc2752e244c66d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1851,
+      "sha256": "30a030bff876e05b16050fbf9c5242f9c269df8c7c65865b95de4c2c53ae4475"
+    },
+    {
+      "path": "design_tokens.json",
+      "bytes": 1859,
+      "sha256": "651787802633515257be8b3cbc88255b531600ecc490a334d75debbc986ec438"
+    },
+    {
+      "path": "fixtures/PRIVATE-DO-NOT-EXPORT.log",
+      "bytes": 101,
+      "sha256": "fc128a57eecb78f46ee15f02b5437de2671cbdcd0e27ff747ced46de9db528be"
+    },
+    {
+      "path": "fixtures/SCENARIO.md",
+      "bytes": 2419,
+      "sha256": "e0a578425302235732eca7899919c75b3f3621e97401aecfdf9db140df8d8c7c"
+    },
+    {
+      "path": "fixtures/sample-uart.log",
+      "bytes": 160,
+      "sha256": "a39e9aeb46ced1ccf98b92534714aac512ce0f0410e5e024b64be9d3cc971f4a"
+    },
+    {
+      "path": "fixtures/scenario.json",
+      "bytes": 4440,
+      "sha256": "b54b38794457d31bd2f6d089360bea580658b5e834b8339ae88880e199e7b376"
+    },
+    {
+      "path": "references/01_target_capsule.png",
+      "bytes": 134344,
+      "sha256": "8a8af2a4f76fcc1f77be47ab60044e384e8de25b2d4d05dd841d33ac47a4058a"
+    },
+    {
+      "path": "references/02_current_main.png",
+      "bytes": 44362,
+      "sha256": "e87c3f07d0f9a796837c5f86e32915dce3e01937cd19b3ea62312b0e30386b7c"
+    },
+    {
+      "path": "references/03_current_capsule_todo.png",
+      "bytes": 16923,
+      "sha256": "561bbd7b9d15421bb0853b1f79bf2471ccaa105f81d4f2807bd068d6c47b629b"
+    },
+    {
+      "path": "references/04_current_capsule_empty.png",
+      "bytes": 16289,
+      "sha256": "76aab2e28fb70fa9e27574fe0112128644323da2d7f1ca18b54d325eda8a965f"
+    },
+    {
+      "path": "references/05_current_capsule_saved.png",
+      "bytes": 5904,
+      "sha256": "5ff2053eb0ae5d9c69ee411b136abe78ae6c2072e1b8fa6fb442b0df72845ec6"
+    },
+    {
+      "path": "references/06_current_capsule_typing.png",
+      "bytes": 6368,
+      "sha256": "3329a224e40cdf5987e89735976736f355aa951750358eb3620957dd2bcba676"
+    },
+    {
+      "path": "references/README.md",
+      "bytes": 1458,
+      "sha256": "c026c112921be29e024b101e9f9bbcbef64d7c87a624b841e2d263fd4cee2311"
+    }
+  ]
+}

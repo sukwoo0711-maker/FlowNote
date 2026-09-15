@@ -1,0 +1,19 @@
+namespace FlowNote.Core.Rules;
+
+public static class RecentPreviewSelector
+{
+    public static IReadOnlyList<T> TakeLatestThenChronological<T>(
+        IEnumerable<T> todayItems,
+        Func<T, DateTimeOffset> occurred,
+        Func<T, long> seq,
+        int count = CapsuleLayout.PreviewRowCount)
+    {
+        return todayItems
+            .OrderByDescending(occurred)
+            .ThenByDescending(seq)
+            .Take(count)
+            .OrderBy(occurred)
+            .ThenBy(seq)
+            .ToList();
+    }
+}

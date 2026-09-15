@@ -1,0 +1,144 @@
+{
+  "fixture_version": 1,
+  "synthetic": true,
+  "note": "선언적 시나리오. 실제 앱 서비스에 맞춰 adapter를 작성한다. 운영 DB 직접 주입 또는 실제 시계 변경 금지.",
+  "display_timezone": "Asia/Seoul",
+  "symbols": "아래 ID는 fixture 별명이다. 앱의 실제 GUID/ID와 별도 매핑한다.",
+  "assets": [
+    {
+      "id": "ATT-IMG",
+      "name": "synthetic-debug.png",
+      "instruction": "실제 유효한 PNG를 테스트 도구로 생성. SYNTHETIC 문구와 무해한 도형만. 외부 다운로드/회사 자료 금지."
+    },
+    {
+      "id": "ATT-LOG",
+      "name": "sample-uart.log",
+      "source": "sample-uart.log"
+    },
+    {
+      "id": "ATT-PRIVATE",
+      "name": "PRIVATE-DO-NOT-EXPORT.log",
+      "source": "PRIVATE-DO-NOT-EXPORT.log"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-09-14T09:00:00+09:00",
+      "action": "create_work_item",
+      "id": "W-A",
+      "title": "취소 후 재시작 오류 확인",
+      "issue_key": "DEV-1234"
+    },
+    {
+      "at": "2026-09-14T09:12:00+09:00",
+      "action": "record_note",
+      "id": "N-A1",
+      "work": "W-A",
+      "body": "조건 B에서만 재현됨. UART 마지막 출력 확인 필요."
+    },
+    {
+      "at": "2026-09-14T09:18:00+09:00",
+      "action": "record_note",
+      "id": "N-A2",
+      "work": "W-A",
+      "body": "초기화 직전의 화면과 UART 로그를 남겼다.",
+      "attachments": [
+        "ATT-IMG",
+        "ATT-LOG"
+      ]
+    },
+    {
+      "at": "2026-09-14T09:25:00+09:00",
+      "action": "set_next_action",
+      "id": "NA-A1",
+      "work": "W-A",
+      "text": "펌프 OFF와 상태 초기화 순서를 비교한다.",
+      "source_note": "N-A1"
+    },
+    {
+      "at": "2026-09-14T10:00:00+09:00",
+      "action": "create_work_item",
+      "id": "W-B",
+      "title": "다른 시험 조건 정리"
+    },
+    {
+      "at": "2026-09-15T09:00:00+09:00",
+      "action": "open_work_context",
+      "work": "W-A",
+      "expect_next_action": "펌프 OFF와 상태 초기화 순서를 비교한다.",
+      "expect_latest_note": "N-A2",
+      "must_not_create_entry": true
+    },
+    {
+      "at": "2026-09-15T09:05:00+09:00",
+      "action": "record_note",
+      "id": "N-PRIVATE",
+      "work": "W-B",
+      "body": "PRIVATE-DO-NOT-EXPORT — 합성 제외 검수용. 외부 보고에 담지 않는다.",
+      "attachments": [
+        "ATT-PRIVATE"
+      ]
+    },
+    {
+      "at": "2026-09-15T09:10:00+09:00",
+      "action": "record_note",
+      "id": "N-A3",
+      "work": "W-A",
+      "body": "조건 B의 추가 재현 시험을 마쳤다. 초기화 순서와 로그를 대조했다."
+    },
+    {
+      "at": "2026-09-15T09:20:00+09:00",
+      "action": "complete_work_item",
+      "work": "W-A",
+      "event_id": "E-COMPLETE-A",
+      "request_id": "REQ-COMPLETE-A"
+    },
+    {
+      "at": "2026-09-15T09:20:01+09:00",
+      "action": "retry_same_complete_request",
+      "work": "W-A",
+      "request_id": "REQ-COMPLETE-A",
+      "must_not_create_duplicate": true
+    }
+  ],
+  "expected_end_state": {
+    "W-A": "completed",
+    "W-B": "open",
+    "active_next_action_W-A": null,
+    "history_retains_NA-A1": true,
+    "complete_event_count_W-A": 1,
+    "N-PRIVATE_report_selected": false
+  },
+  "report": {
+    "date": "2026-09-15",
+    "initial_selection": [],
+    "explicit_selected_entries": [
+      "N-A3",
+      "E-COMPLETE-A"
+    ],
+    "explicit_out_of_range_entries": [
+      "N-A2"
+    ],
+    "explicit_selected_attachments": [
+      "ATT-IMG"
+    ],
+    "must_exclude_entries": [
+      "N-PRIVATE"
+    ],
+    "must_exclude_attachments": [
+      "ATT-LOG",
+      "ATT-PRIVATE"
+    ],
+    "must_exclude_token": "PRIVATE-DO-NOT-EXPORT",
+    "must_label_old_record_date": "2026-09-14",
+    "must_not_export_active_next_action_for_W-A": true
+  },
+  "additional_branches": [
+    "완료 직전 실패 주입 → open/다음행동 유지/완료 이벤트0",
+    "완료 뒤 reopen → active next action 없음 → 이전 다음행동 사용 명시 선택 후 복원",
+    "보고 preview 후 N-A3 편집 → 갱신 없이 최종 내보내기 차단",
+    "A 초안+첨부 상태에서 B 이어서 클릭 → 취소해도 A 초안/첨부/연결 보존",
+    "날짜2026-09-14 as-of → A진행중/NA-A1 보존; 오늘 상태 소급 금지",
+    "같은 시각20개/한 날50개/10,000개 성능 fixture는 별도 생성; 운영 시계 변경 금지"
+  ]
+}

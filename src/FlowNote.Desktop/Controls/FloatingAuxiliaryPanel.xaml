@@ -1,0 +1,117 @@
+<UserControl x:Class="FlowNote.Desktop.Controls.FloatingAuxiliaryPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:FlowNote.Desktop.Controls"
+             Width="480">
+    <Border Background="{StaticResource CapsulePanelBrush}"
+            BorderBrush="{StaticResource CapsuleBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="14"
+            Padding="12,8,12,10">
+        <Grid>
+            <DockPanel x:Name="RecentHost" Visibility="{Binding ShowRecentPanel, Converter={StaticResource BoolToVis}}">
+                <DockPanel DockPanel.Dock="Top" Height="24" Margin="0,0,0,4">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="하루 전체"
+                            Margin="8,0,0,0"
+                            Command="{Binding OpenTodayCommand}" AutomationProperties.Name="하루 전체"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Margin="0,0,0,0"
+                            Content="{Binding PinPreviewLabel}" Command="{Binding TogglePinPreviewCommand}"
+                            AutomationProperties.Name="패널 유지"/>
+                    <TextBlock Text="최근 기록" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{StaticResource CapsuleTextPrimaryBrush}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <TextBlock Text="오늘 기록이 아직 없습니다"
+                           Foreground="{StaticResource CapsuleTextSecondaryBrush}" FontSize="12"
+                           Visibility="{Binding ShowRecentEmpty, Converter={StaticResource BoolToVis}}"/>
+                <ItemsControl ItemsSource="{Binding RecentRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:CompactLogRow OpenRequested="OnRecentOpen"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+
+            <DockPanel x:Name="TodoHost" Visibility="{Binding ShowTodoPanel, Converter={StaticResource BoolToVis}}">
+                <DockPanel DockPanel.Dock="Top" Height="24" Margin="0,0,0,4">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="{Binding MoreTodosText}"
+                            Command="{Binding OpenTodayCommand}"
+                            Visibility="{Binding HasMoreTodos, Converter={StaticResource BoolToVis}}"
+                            AutomationProperties.Name="할 일 전체 보기"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Margin="0,0,4,0"
+                            Content="{Binding PinPreviewLabel}" Command="{Binding TogglePinPreviewCommand}"
+                            AutomationProperties.Name="패널 유지"/>
+                    <TextBlock Text="{Binding OpenCountText}" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{StaticResource CapsuleTextPrimaryBrush}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                    <Button DockPanel.Dock="Top" Style="{StaticResource CapsuleTextButton}" HorizontalAlignment="Left"
+                            Content="+ 할 일 추가" Command="{Binding ToggleAddTodoCommand}"
+                            Visibility="{Binding ShowAddTodoInput, Converter={StaticResource InverseBoolToVis}}"
+                            AutomationProperties.Name="할 일 추가 열기"/>
+                    <DockPanel Visibility="{Binding ShowAddTodoInput, Converter={StaticResource BoolToVis}}">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="추가"
+                                Command="{Binding AddWorkItemCommand}" AutomationProperties.Name="할 일 추가"/>
+                        <TextBox x:Name="TodoTitle"
+                                 Style="{StaticResource CapsuleTextBox}" Height="28"
+                                 Text="{Binding WorkItemTitle, UpdateSourceTrigger=PropertyChanged}"
+                                 PreviewKeyDown="OnTodoKeyDown"
+                                 AutomationProperties.Name="할 일 제목"/>
+                    </DockPanel>
+                </DockPanel>
+                <Border DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="0,4"
+                        Visibility="{Binding ShowUndoComplete, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="실행 취소"
+                                Command="{Binding UndoCompleteCommand}" AutomationProperties.Name="완료 실행 취소"/>
+                        <TextBlock Text="완료 기록이 남았습니다" FontSize="12"
+                                   Foreground="{StaticResource CapsuleCompletedBrush}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
+                <TextBlock Text="남은 할 일이 없어요" FontSize="12" Margin="0,4,0,4"
+                           Foreground="{StaticResource CapsuleTextSecondaryBrush}"
+                           Visibility="{Binding ShowTodoEmpty, Converter={StaticResource BoolToVis}}"/>
+                <ItemsControl ItemsSource="{Binding VisibleWorkItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:CompactTodoRow CompleteRequested="OnTodoComplete" OpenRequested="OnTodoOpen"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+
+            <DockPanel x:Name="DraftHost" Visibility="{Binding ShowDraftPanel, Converter={StaticResource BoolToVis}}">
+                <DockPanel DockPanel.Dock="Top" Height="24" Margin="0,0,0,4">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="{Binding SaveLabel}"
+                            Command="{Binding SaveNoteCommand}" AutomationProperties.Name="기록"/>
+                    <TextBlock Text="긴 메모" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{StaticResource CapsuleTextPrimaryBrush}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="{Binding ErrorText}" FontSize="12" Margin="0,0,0,6"
+                           Foreground="{StaticResource CapsuleErrorBrush}" TextWrapping="Wrap"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock DockPanel.Dock="Top" Text="{Binding DraftHint}" FontSize="11" Margin="0,0,0,4"
+                           Foreground="{StaticResource CapsuleTextSecondaryBrush}"/>
+                <ItemsControl DockPanel.Dock="Bottom" Margin="0,8,0,0" ItemsSource="{Binding VisiblePendingFiles}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <controls:CompactAttachmentRow RemoveRequested="OnRemoveAttachment"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding MorePendingText}" FontSize="11"
+                           Foreground="{StaticResource CapsuleTextSecondaryBrush}"
+                           Visibility="{Binding HasMorePending, Converter={StaticResource BoolToVis}}"/>
+                <TextBox x:Name="LongMemo"
+                         Style="{StaticResource CapsuleTextBox}"
+                         MinHeight="96" MaxHeight="144"
+                         AcceptsReturn="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         VerticalContentAlignment="Top"
+                         Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewKeyDown="OnLongMemoKeyDown"
+                         AutomationProperties.Name="긴 메모"/>
+            </DockPanel>
+        </Grid>
+    </Border>
+</UserControl>
