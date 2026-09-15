@@ -77,9 +77,18 @@ public static class AssistVersions
 {
     public const string RulesVersion = "v4-r1";
     public const string PolicyVersion = "v4-p1";
-    public const string ModelTag = "qwen3:4b";
+    public const string ModelTag = "Qwen3-4B-Q4_K_M";
     public const string RulesDigestToken = "rules";
     public const string DefaultOllamaBaseUrl = "http://127.0.0.1:11435";
+    public const string EmbeddedProvider = "embedded-llama.cpp";
+    public const string EngineReleaseTag = "b10964";
+    public const string ModelFileName = "Qwen3-4B-Q4_K_M.gguf";
+    public const int IdleStopSeconds = 120;
+    public const int ColdStartupSeconds = 180;
+    public const int ConnectTimeoutSeconds = 2;
+    public const int StopDrainSeconds = 3;
+    public const int PortAttempts = 3;
+    public const int JsonMaxDepth = 32;
     public const int MaxCandidates = 6;
     public const int MaxMentions = 2;
     public const int TopicQuoteMax = 60;

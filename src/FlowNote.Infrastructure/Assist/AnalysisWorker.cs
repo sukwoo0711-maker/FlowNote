@@ -109,7 +109,7 @@ public sealed class AnalysisWorker : IDisposable
                 result = rules;
                 origin = AssignmentOrigin.Rule;
             }
-            else if (_clock.UtcNow < _circuitUntil || !_inference.IsAvailable)
+            else if (_clock.UtcNow < _circuitUntil)
             {
                 _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "model-unavailable", null, _clock.UtcNow - started);
                 Completed?.Invoke();

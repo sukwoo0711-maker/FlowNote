@@ -1,0 +1,25 @@
+FlowNote 0.4.0 — 보안 PC 초기 배포 (Windows x64)
+
+이 폴더는 인터넷이 없는 보안 PC에 USB 등으로 복사해 쓰는 기록 앱입니다.
+설치 마법사 없이 FlowNote.Desktop.exe를 실행합니다.
+
+로컬 AI
+- 공식 llama.cpp b10964 CPU 런타임과 공식 Qwen3-4B-Q4_K_M.gguf 를 동봉합니다.
+- 반입 경로는 GitHub ggml-org/llama.cpp 릴리스 zip, Hugging Face Qwen/Qwen3-4B-GGUF 만 사용합니다.
+- 파일 SHA-256이 packaging lock 과 다르면 넣지 않습니다. 임의 사이트·임의 GGUF는 거부합니다.
+- 로컬 보조를 켜면 원문은 이 PC 안 127.0.0.1 자식 프로세스로만 갑니다. 인터넷·클라우드 AI로는 나가지 않습니다.
+- 엔진은 필요할 때만 뜨고, 쉬는 동안 종료됩니다. 기본 모드는 규칙만이며 설정에서 로컬 보조를 켭니다.
+
+데이터
+- 기록·첨부는 이 PC의 %LOCALAPPDATA%\FlowNote\live 에만 남습니다.
+- 클라우드 동기화, 원격 AI, 자동 업데이트, 사용량 전송이 없습니다.
+
+실행 파일
+- FlowNote.Desktop.exe 와 동봉 llama-server.exe 만 허용합니다.
+- createdump.exe, ggml-rpc-server.exe 는 포함하지 않습니다.
+- 파일별 SHA-256은 같은 폴더의 FILEHASHES.txt 로 대조하세요. zip 해시는 배포 폴더의 SHA256SUMS.txt 입니다.
+
+운영
+- 끝내려면 트레이 → 앱 종료.
+- 제거는 이 폴더를 지우고, 필요하면 %LOCALAPPDATA%\FlowNote 를 지웁니다.
+- 코드 서명은 이 빌드에 없습니다. 반입 전에 해시와 백신 검사를 하세요.

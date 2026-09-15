@@ -27,6 +27,8 @@ public sealed class AppSession : INotifyPropertyChanged
 
     public FlowNoteDatabase Database { get; }
 
+    public FlowNote.Infrastructure.Assist.Embedded.EmbeddedEngineManager? Engine { get; set; }
+
     public DateOnly SelectedDate { get; private set; }
 
     public string? SelectedEntryId { get; private set; }

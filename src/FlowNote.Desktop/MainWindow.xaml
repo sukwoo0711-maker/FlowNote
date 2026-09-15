@@ -226,7 +226,15 @@
                                 Margin="8,0,0,0" AutomationProperties.Name="로컬 보조"/>
                     </StackPanel>
                     <TextBlock Margin="0,16,0,0" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
-                               Text="기록 창 고정과 패널 유지는 캡슐 메뉴에서 바꿉니다. 가격·결제·외부 AI·자동 수집 설정은 없습니다."/>
+                               Text="기록 창 고정과 패널 유지는 캡슐 메뉴에서 바꿉니다. 가격·결제·외부 AI·자동 수집 설정은 없습니다. 포트와 API 키는 앱이 관리합니다."/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Style="{StaticResource SecondaryButton}" Content="모델 파일 가져오기" Command="{Binding ImportModelCommand}"
+                                AutomationProperties.Name="모델 파일 가져오기"/>
+                        <Button Style="{StaticResource SecondaryButton}" Content="다시 시도" Command="{Binding RetryEngineCommand}"
+                                Margin="8,0,0,0" AutomationProperties.Name="엔진 다시 시도"/>
+                        <Button Style="{StaticResource SecondaryButton}" Content="AI 없이 계속" Command="{Binding ContinueWithoutAiCommand}"
+                                Margin="8,0,0,0" AutomationProperties.Name="AI 없이 계속"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
 

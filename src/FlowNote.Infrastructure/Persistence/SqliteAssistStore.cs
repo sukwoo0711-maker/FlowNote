@@ -15,6 +15,7 @@ public sealed class SqliteAssistStore
     public const string ModelTagKey = "assist.model_tag";
     public const string DigestKey = "assist.locked_digest";
     public const string ScopeAckKey = "assist.scope_ack";
+    public const string ProviderKey = "assist.provider";
 
     private readonly SqliteDatabaseExecutor _executor;
     private readonly IClock _clock;
@@ -35,6 +36,17 @@ public sealed class SqliteAssistStore
             var current = ReadSettings(connection, transaction);
             WriteSetting(connection, transaction, ModeKey, AssistCodec.Mode(mode));
             WriteSetting(connection, transaction, PolicyKey, (current.PolicyRevision + 1).ToString());
+            return 0;
+        });
+    }
+
+    public void SetLockedDigest(string digest)
+    {
+        _executor.Write((connection, transaction) =>
+        {
+            WriteSetting(connection, transaction, DigestKey, digest);
+            WriteSetting(connection, transaction, ProviderKey, AssistVersions.EmbeddedProvider);
+            WriteSetting(connection, transaction, ModelTagKey, AssistVersions.ModelTag);
             return 0;
         });
     }

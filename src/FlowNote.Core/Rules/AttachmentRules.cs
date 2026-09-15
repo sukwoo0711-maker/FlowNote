@@ -6,7 +6,8 @@ public static class AttachmentRules
 {
     private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".ps1", ".js", ".vbs", ".wsf", ".lnk", ".reg", ".dll"
+        ".exe", ".bat", ".cmd", ".com", ".msi", ".scr", ".ps1", ".js", ".jse", ".vbs", ".vbe", ".wsf", ".wsh",
+        ".hta", ".cpl", ".msc", ".pif", ".lnk", ".url", ".reg", ".dll", ".application", ".appref-ms", ".msp"
     };
 
     public static void ValidateFile(string originalName, long byteSize, int currentCount)

@@ -22,6 +22,36 @@ public static class V4AssistDemoSeeder
         database.Settings.Set(SettingKey, SettingValue);
     }
 
+    public static async Task<IReadOnlyDictionary<string, string>> SeedInputsOnlyAsync(
+        FlowNoteDatabase database,
+        Action<DateTimeOffset> setClock,
+        string? fixtureDirectory)
+    {
+        var inputsPath = Resolve(fixtureDirectory, "A_deferred.inputs.json");
+        if (inputsPath is null)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        using var inputs = JsonDocument.Parse(await File.ReadAllTextAsync(inputsPath));
+        var idMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var ev in inputs.RootElement.GetProperty("events").EnumerateArray())
+        {
+            var fixtureId = ev.GetProperty("entry_id").GetString() ?? "";
+            var occurred = DateTimeOffset.Parse(ev.GetProperty("occurred_at").GetString()!, CultureInfo.InvariantCulture);
+            setClock(occurred.ToUniversalTime());
+            var saved = await database.Entries.SaveNoteAsync(new SaveNoteRequest
+            {
+                RequestId = "assist-live-" + fixtureId,
+                Body = ev.GetProperty("note_text").GetString() ?? "",
+                OccurredAtUtc = occurred.ToUniversalTime()
+            });
+            idMap[fixtureId] = saved.Id;
+        }
+
+        return idMap;
+    }
+
     public static async Task<IReadOnlyDictionary<string, string>> SeedDeferredAsync(
         FlowNoteDatabase database,
         Action<DateTimeOffset> setClock,

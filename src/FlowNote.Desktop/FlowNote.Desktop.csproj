@@ -25,6 +25,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\packaging\ai-runtime\engine-lock.json"
+             Link="ai-runtime\engine-lock.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\packaging\ai-runtime\model-lock.json"
+             Link="ai-runtime\model-lock.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(FlowNotePublishProfile)' != 'SecurityPc'">
     <Content Include="..\..\fixtures\v3\**\*"
              Link="fixtures\v3\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"

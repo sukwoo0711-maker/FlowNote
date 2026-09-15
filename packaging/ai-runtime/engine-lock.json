@@ -1,0 +1,62 @@
+{
+  "provider": "embedded-llama.cpp",
+  "lockVersion": 1,
+  "engine": {
+    "repo": "ggml-org/llama.cpp",
+    "releaseTag": "b10964",
+    "commit": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+    "assetUrl": "https://github.com/ggml-org/llama.cpp/releases/download/b10964/llama-b10964-bin-win-cpu-x64.zip",
+    "archiveSha256": "917f39c076402c421224824607397af20f53625a60defc20e8dd22446bf4c5d7",
+    "archiveBytes": 18427629,
+    "backend": "cpu",
+    "requiredCpuFeatures": "x86-64; ggml-cpu variant DLLs selected at load time",
+    "dependencies": "VC++ 2015-2022 x64 runtime (VCRUNTIME140.dll, MSVCP140.dll) already present on this Windows 11 PC; not bundled",
+    "files": [
+      { "relativePath": "ggml.dll", "sha256": "9865b315ce521f45b79c50f1d5cfb56cf9f94f186aac3ed0fceebd67f46e48c7", "bytes": 79872 },
+      { "relativePath": "ggml-base.dll", "sha256": "645538131f61107314a1fb38ee43b392ce76a16d1a6811f065b693c9552d8e18", "bytes": 796160 },
+      { "relativePath": "ggml-cpu-alderlake.dll", "sha256": "79bd5a3a21e574963312518c43c99ce76d10aa80651f658ac00003aae1f3fe01", "bytes": 1230336 },
+      { "relativePath": "ggml-cpu-cannonlake.dll", "sha256": "9959698ba5b224a2541d72f711ec856133e010ee95854b70fd034f2c56a4ee05", "bytes": 1448448 },
+      { "relativePath": "ggml-cpu-cascadelake.dll", "sha256": "edf3ffb10c59cbce92880c82f9580aae8dbf9c41d7e798a5cd8b4ca0acb10167", "bytes": 1434112 },
+      { "relativePath": "ggml-cpu-cooperlake.dll", "sha256": "b726f7689ec7b5f5b67aa37bacb8c36348450f535aaf86f68a6756b9f90c98a0", "bytes": 1434624 },
+      { "relativePath": "ggml-cpu-haswell.dll", "sha256": "97302fa13b3fd496828e6f4936ac01433532880cf8277de6bc8b0117add0b816", "bytes": 1235968 },
+      { "relativePath": "ggml-cpu-icelake.dll", "sha256": "d29a2b47db63d0acb29ca6314cc4a9e0579592d0bbde42926bcab525296bd464", "bytes": 1440768 },
+      { "relativePath": "ggml-cpu-ivybridge.dll", "sha256": "b742628d4a73f24dad4a4c516d8600b7d50d2e7c07cf6011592bb0f0bda45349", "bytes": 1127424 },
+      { "relativePath": "ggml-cpu-piledriver.dll", "sha256": "04540f47f6a6d1ccabbb9a92470a9d27ddff6c47cb015b38f9383ac83a93fc5f", "bytes": 1131520 },
+      { "relativePath": "ggml-cpu-sandybridge.dll", "sha256": "96d99740a206893d081e61a2e2c32ea2b999be0cc82410182e232d2d8041a392", "bytes": 1107968 },
+      { "relativePath": "ggml-cpu-sapphirerapids.dll", "sha256": "858ea2d8375a94d61d9a80e98ef8f8a88f1ef7c537e98eb69752129fab7cedd2", "bytes": 1711616 },
+      { "relativePath": "ggml-cpu-skylakex.dll", "sha256": "2b6ac583bbea84b6649ebfbf771907df208c9bfac33d024adb430a853018b396", "bytes": 1441792 },
+      { "relativePath": "ggml-cpu-sse42.dll", "sha256": "5c23106448a1edfb2683fcc955df017e8e4bdb3330114afa948c1870f8d7a91f", "bytes": 932352 },
+      { "relativePath": "ggml-cpu-x64.dll", "sha256": "9241c4023de3b08eadcb56314bf51ac2bd338b12c4008fa4950c30068c11afb6", "bytes": 924160 },
+      { "relativePath": "ggml-cpu-zen4.dll", "sha256": "b8f6bd5d70bc608cd2d752ae74bbf85925c2945267bb0eded15aab324ff9716a", "bytes": 1441280 },
+      { "relativePath": "libomp.dll", "sha256": "a12116ba72d1d6820407cf30be23da04ce79d6bb8a71a5ee71759c5a1faa6f1c", "bytes": 768000 },
+      { "relativePath": "llama.dll", "sha256": "d5fed9f3fe95f03dce3714500903763356122faf1ae98a6179e6490f090c3798", "bytes": 3154944 },
+      { "relativePath": "llama-common.dll", "sha256": "a9590b558f417f54d17fc688961959b3f4a95038195732adc41faab1999b69e3", "bytes": 7772672 },
+      { "relativePath": "llama-server.exe", "sha256": "aa2e1f5c67be55f11be26ae58d643a545ca07c6de498f6f870330ac2f4dfec73", "bytes": 9216 },
+      { "relativePath": "llama-server-impl.dll", "sha256": "16913f79cdf57f0f80e618aeff139aa0ae096f8f935b06a02510c556e976d9d4", "bytes": 8904192 },
+      { "relativePath": "mtmd.dll", "sha256": "5a8a0e95ea7b3da360e1ace6325fa441834a2b01fbe9c50639fb7f0c5d57c479", "bytes": 1772032 }
+    ]
+  },
+  "model": {
+    "repo": "Qwen/Qwen3-4B-GGUF",
+    "revision": "bc640142c66e1fdd12af0bd68f40445458f3869b",
+    "fileName": "Qwen3-4B-Q4_K_M.gguf",
+    "quantization": "Q4_K_M",
+    "sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+    "bytes": 2497280256,
+    "licenseEvidencePath": "licenses/Qwen.LICENSE"
+  },
+  "protocol": {
+    "endpoint": "/v1/chat/completions",
+    "responseFormat": "json_object+schema",
+    "thinkingDisabledVerified": true,
+    "adapterVersion": "v41-llama-1",
+    "ruleVersion": "v4-r1"
+  },
+  "validation": {
+    "compatibilityFingerprint": "630152b47ca01b2431bc99a340704421c502f1eb6e309f0d1f225fe13b26927a",
+    "engineRealReport": "docs/assist-v4_1/engine-capabilities.json",
+    "modelRealReport": "docs/assist-v4_1/MODEL_EVAL.json",
+    "engineReal": "PASS",
+    "modelReal": "FAIL"
+  }
+}

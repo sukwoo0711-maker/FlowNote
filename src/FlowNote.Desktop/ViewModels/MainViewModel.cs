@@ -79,6 +79,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         SetAssistOffCommand = new RelayCommand(() =>
         {
             Session.Database.Assist.SetMode(AssistMode.Off);
+            Session.Engine?.Disable();
             Session.NotifyDataChanged();
         });
         SetAssistRulesCommand = new RelayCommand(() =>
@@ -107,6 +108,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
         });
         UndoAssistCommand = new RelayCommand(UndoAssist);
+        ImportModelCommand = new RelayCommand(() => ImportModelRequested?.Invoke());
+        RetryEngineCommand = new RelayCommand(() =>
+        {
+            _ = Session.Engine?.ResetForRetryAsync();
+            Session.NotifyDataChanged();
+        });
+        ContinueWithoutAiCommand = new RelayCommand(() =>
+        {
+            Session.Database.Assist.SetMode(AssistMode.RulesOnly);
+            Session.NotifyDataChanged();
+        });
         session.DataChanged += Reload;
         session.PropertyChanged += (_, args) =>
         {
@@ -312,6 +324,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand NewAssistThreadCommand { get; }
     public ICommand AssignAssistThreadCommand { get; }
     public ICommand UndoAssistCommand { get; }
+    public ICommand ImportModelCommand { get; }
+    public ICommand RetryEngineCommand { get; }
+    public ICommand ContinueWithoutAiCommand { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -324,6 +339,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public event Action<string?>? LinkWorkRequested;
 
     public event Action? AssistScopeAckRequested;
+
+    public event Action? ImportModelRequested;
 
     public void SetNarrow(bool isNarrow)
     {
@@ -883,7 +900,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             _ => "규칙만"
         };
         AssistModelText = settings.Mode == AssistMode.LocalAssist
-            ? $"외부 AI 없음 · {settings.OllamaBaseUrl} · {settings.ModelTag} · 자동 의미 연결 {(settings.SemanticAutoApply ? "켜짐" : "꺼짐")}"
+            ? "외부 AI 없음 · 동봉 로컬 엔진 · " + (Session.Engine?.StatusText ?? "모델이 없으면 가져오기")
             : "외부 AI 없음 · 기본은 규칙 모드 · 모델이 없어도 원문 기록은 됩니다";
         Raise(nameof(AssistModeText));
         Raise(nameof(AssistModelText));

@@ -1,0 +1,33 @@
+﻿{
+    "collected_utc":  "2026-09-15T06:44:51.0845228+00:00",
+    "repo":  "C:\\GitRepositories\\FlowNote",
+    "branch":  "main",
+    "commit":  "706bb48d737527d5cbae7c488dccd0ebd7803f05",
+    "os":  "Microsoft Windows 11 Home",
+    "os_build":  "26200",
+    "os_arch":  "64비트",
+    "cpu_name":  "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+    "logical_processors":  16,
+    "ram_gb":  61.6,
+    "gpu":  [
+                {
+                    "name":  "NVIDIA GeForce RTX 5080",
+                    "driver":  "32.0.15.7688",
+                    "adapter_ram":  4293918720
+                },
+                {
+                    "name":  "Easy\u0026Light Display HUB Virtual Display",
+                    "driver":  "4.6.5.0",
+                    "adapter_ram":  null
+                },
+                {
+                    "name":  "AMD Radeon(TM) Graphics",
+                    "driver":  "32.0.21030.2001",
+                    "adapter_ram":  2147483648
+                }
+            ],
+    "sdk_info":  ".NET SDK:\r\n Version:           10.0.401\r\n Commit:            e34a38d2ae\r\n Workload version:  10.0.400-manifests.63b36e85\r\n MSBuild version:   18.9.11+e34a38d2a\r\n\r\n?고????섍꼍:\r\n OS Name:     Windows\r\n OS Version:  10.0.26200\r\n OS Platform: Windows\r\n RID:         win-x64\r\n Base Path:   C:\\Program Files\\dotnet\\sdk\\10.0.401\\\r\n\r\n?ㅼ튂??.NET ?뚰겕濡쒕뱶:\r\n?쒖떆???ㅼ튂???뚰겕濡쒕뱶媛 ?놁뒿?덈떎.\r\n??留ㅻ땲?섏뒪?몃? ?ㅼ튂????use workload sets ?ъ슜?섎룄濡?援ъ꽦?⑸땲??\r\n?뚰겕濡쒕뱶 吏묓빀???ㅼ튂?섏뼱 ?덉? ?딆뒿?덈떎. \"dotnet workload restore\"瑜??ㅽ뻾?섏뿬 ?뚰겕濡쒕뱶 吏묓빀???ㅼ튂?섏꽭??\r\n\r\nHost:\r\n  Version:      10.0.12\r\n  Architecture: x64\r\n  Commit:       95017c711e\r\n\r\n.NET SDKs installed:\r\n  10.0.401 [C:\\Program Files\\dotnet\\sdk]\r\n\r\n.NET runtimes installed:\r\n  Microsoft.AspNetCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\r\n  Microsoft.NETCore.App 10.0.11 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\r\n  Microsoft.NETCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\r\n  Microsoft.WindowsDesktop.App 10.0.11 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\r\n  Microsoft.WindowsDesktop.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\r\n\r\nOther architectures found:\r\n  x86   [C:\\Program Files (x86)\\dotnet]\r\n    registered at [HKLM\\SOFTWARE\\dotnet\\Setup\\InstalledVersions\\x86\\InstallLocation]\r\n\r\nEnvironment variables:\r\n  DOTNET_CLI_TELEMETRY_OPTOUT              [1]\r\n\r\nglobal.json file:\r\n  C:\\GitRepositories\\FlowNote\\global.json\r\n\r\nLearn more:\r\n  https://aka.ms/dotnet/info\r\n\r\nDownload .NET:\r\n  https://aka.ms/dotnet/download\r\n",
+    "engine_zip_present":  true,
+    "gguf_present":  true,
+    "ollama_command":  false
+}

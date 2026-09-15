@@ -26,6 +26,17 @@ public sealed class AppStoragePaths
 
     public string StagingDirectory => Path.Combine(Root, "staging");
 
+    public string EngineSessionDirectory => Path.Combine(Root, "engine-session");
+
+    public string SharedModelsDirectory
+    {
+        get
+        {
+            var parent = Directory.GetParent(Path.GetFullPath(Root))?.FullName ?? Path.GetFullPath(Root);
+            return Path.Combine(parent, "models");
+        }
+    }
+
     public static AppStoragePaths Create(AppStorageMode mode, string? localAppDataRoot = null)
     {
         var local = localAppDataRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -42,5 +53,7 @@ public sealed class AppStoragePaths
         Directory.CreateDirectory(AttachmentsDirectory);
         Directory.CreateDirectory(ThumbnailsDirectory);
         Directory.CreateDirectory(StagingDirectory);
+        Directory.CreateDirectory(EngineSessionDirectory);
+        Directory.CreateDirectory(SharedModelsDirectory);
     }
 }

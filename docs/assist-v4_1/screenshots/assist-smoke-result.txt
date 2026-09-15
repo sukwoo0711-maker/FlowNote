@@ -1,0 +1,8 @@
+PASS
+layer=WINDOWS_UI
+scenario=A_deferred seeded expected JSON (not MODEL_REAL)
+notes=5
+lanes=2
+capsule=520x52
+settings=rules_only
+correction=unlink+lock

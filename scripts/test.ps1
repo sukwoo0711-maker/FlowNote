@@ -10,4 +10,6 @@ if ($args.Count -ge 1 -and -not [string]::IsNullOrWhiteSpace($args[0])) {
 }
 
 dotnet restore FlowNote.sln --locked-mode
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet test FlowNote.sln -c $configuration --no-restore
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
