@@ -12,6 +12,10 @@ namespace FlowNote.Desktop.ViewModels;
 
 public sealed class MainViewModel : INotifyPropertyChanged
 {
+    private string? _activeSearchQuery;
+    private DateOnly _searchDate;
+    public bool IsSearching => !string.IsNullOrEmpty(_activeSearchQuery);
+
     public MainViewModel(AppSession session)
     {
         Session = session;
@@ -19,9 +23,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         NextDayCommand = new RelayCommand(() => Session.SelectDate(Session.SelectedDate.AddDays(1)));
         TodayCommand = new RelayCommand(() =>
             Session.SelectDate(DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Session.Database.DisplayTimeZone.TimeZone).DateTime)));
-        ChronologicalCommand = new RelayCommand(() => Session.SetViewMode(TimelineViewMode.Chronological));
-        ByWorkCommand = new RelayCommand(() => Session.SetViewMode(TimelineViewMode.ByWork));
-        PanoramaCommand = new RelayCommand(() => Session.SetViewMode(TimelineViewMode.Panorama));
+        ChronologicalCommand = new RelayCommand(() => SelectView(TimelineViewMode.Chronological));
+        ByWorkCommand = new RelayCommand(() => SelectView(TimelineViewMode.ByWork));
+        PanoramaCommand = new RelayCommand(() => SelectView(TimelineViewMode.Panorama));
         OpenPanoramaNoteCommand = new RelayCommandParam(parameter =>
         {
             if (parameter is TimelineRow row)
@@ -148,6 +152,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Raise(nameof(ShowOnboarding));
             }
 
+            if (args.PropertyName is nameof(AppSession.SelectedDate))
+            {
+                _activeSearchQuery = null;
+            }
+
             if (args.PropertyName is nameof(AppSession.ViewMode))
             {
                 Reload();
@@ -160,7 +169,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ObservableCollection<TimelineRow> Rows { get; } = [];
 
-    public string HeaderTitle => IsToday
+    public string HeaderTitle => IsSearching ? "전체 기록에서 검색" : IsToday
         ? "오늘의 흐름"
         : Session.SelectedDate.ToString("M월 d일의 흐름");
 
@@ -177,7 +186,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string DateLabel => Session.SelectedDate.ToString("yyyy년 M월 d일");
 
-    public string DateHeading => Session.SelectedDate.ToString("M월 d일");
+    public string DateHeading => IsSearching ? "검색 결과" : Session.SelectedDate.ToString("M월 d일");
 
     public bool HasMinimap => MinimapLanes.Count > 0;
 
@@ -489,6 +498,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public void Reload()
     {
+        if (IsSearching && Session.SelectedDate == _searchDate && Session.ViewMode == TimelineViewMode.Chronological)
+        {
+            ReloadSearchResults();
+            return;
+        }
+        _activeSearchQuery = null;
         var entries = Session.Database.Entries.ListForLocalDateAsync(Session.SelectedDate).GetAwaiter().GetResult();
         var summary = Session.Summarize(entries);
         SummaryText = $"기록 {summary.EntryCount}개 · 완료 업무 {summary.CompletedWorkItemCount}개 · 첨부 {summary.AttachmentCount}개";
@@ -553,6 +568,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Raise(nameof(HasRows));
         Raise(nameof(HasDayEntries));
         Raise(nameof(EmptyText));
+        Raise(nameof(EmptyPrimary));
+        Raise(nameof(IsSearching));
         Raise(nameof(ShowTimeline));
         Raise(nameof(ShowEmpty));
         Raise(nameof(ShowPanorama));
@@ -590,41 +607,57 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private void SelectView(TimelineViewMode mode)
+    {
+        _activeSearchQuery = null;
+        Session.SetViewMode(mode);
+    }
+
     private void RunSearch()
     {
         SetPage(MainPage.Flow);
         CloseDetail();
+        _activeSearchQuery = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+        _searchDate = Session.SelectedDate;
         if (Session.ViewMode != TimelineViewMode.Chronological)
-        {
             Session.SetViewMode(TimelineViewMode.Chronological);
-        }
-
-        if (string.IsNullOrWhiteSpace(SearchText))
-        {
+        else
             Reload();
-            return;
-        }
+    }
 
-        var found = Session.Database.Entries.Search(SearchText);
+    private void ReloadSearchResults()
+    {
+        var found = Session.Database.Entries.Search(_activeSearchQuery!);
+        var selectedId = Session.SelectedEntryId;
+        var ids = found.Select(entry => entry.Id).ToList();
+        var assignments = Session.Database.Assist.ListAssignments(ids);
+        var threads = Session.Database.Assist.ListThreadsById(assignments.Values
+            .Where(item => item.ThreadId is not null).Select(item => item.ThreadId!));
+        var jobs = Session.Database.Assist.LatestJobs(ids);
         MinimapLanes.Clear();
-        Raise(nameof(HasMinimap));
+        PanoramaSegments.Clear();
+        PanoramaSummary = "";
         Rows.Clear();
         foreach (var entry in found)
         {
-            Rows.Add(TimelineRow.From(entry, Session));
+            assignments.TryGetValue(entry.Id, out var assignment);
+            jobs.TryGetValue(entry.Id, out var job);
+            threads.TryGetValue(assignment?.ThreadId ?? "", out var thread);
+            Rows.Add(TimelineRow.From(entry, Session, assignment, thread, job, showDate: true));
         }
-
         HasRows = Rows.Count > 0;
-        EmptyText = HasRows ? "" : "검색 결과가 없습니다";
         HasDayEntries = HasRows;
-        SummaryText = $"전체 기록에서 검색 · {Rows.Count}개";
-        Raise(nameof(HasDayEntries));
-        Raise(nameof(EmptyPrimary));
-        Raise(nameof(SummaryText));
-        Raise(nameof(HasRows));
-        Raise(nameof(EmptyText));
-        Raise(nameof(ShowTimeline));
-        Raise(nameof(ShowEmpty));
+        EmptyText = HasRows ? "" : "검색 결과가 없습니다";
+        SummaryText = $"전체 기록에서 검색 · {Rows.Count}개 · {_activeSearchQuery}";
+        ReloadAssistSettings();
+        ReloadContinue();
+        foreach (var name in new[] { nameof(IsSearching), nameof(HeaderTitle), nameof(DateHeading),
+            nameof(HasMinimap), nameof(HasDayEntries), nameof(EmptyPrimary), nameof(SummaryText),
+            nameof(HasRows), nameof(EmptyText), nameof(PanoramaSummary) })
+            Raise(name);
+        RaiseViewFlags();
+        if (selectedId is not null)
+            Select(Rows.FirstOrDefault(row => row.Id == selectedId));
     }
 
     private void RaiseViewFlags()
@@ -1098,7 +1131,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Title = marker.Title,
                 TimeLabel = FormatObservedRange(entry.OccurredAtUtc, entry.OccurredAtUtc),
                 CountLabel = entry.TitleSnapshot ?? "",
-                StatusLabel = marker.Kind == EntryKind.TaskCompleted ? "공식 완료" : "공식 취소",
+                StatusLabel = marker.Title,
                 ThreadId = marker.ThreadId,
                 AccentIndex = string.IsNullOrEmpty(marker.ThreadId) ? 0 : AccentFor(marker.ThreadId),
                 IsExpanded = expanded.Contains(key),
@@ -1348,7 +1381,8 @@ public sealed class TimelineRow
         AppSession session,
         EntryContextAssignment? assignment = null,
         ContextThread? thread = null,
-        AnalysisJob? job = null)
+        AnalysisJob? job = null,
+        bool showDate = false)
     {
         var local = TimeZoneInfo.ConvertTime(entry.OccurredAtUtc, session.Database.DisplayTimeZone.TimeZone);
         var recordedLocal = TimeZoneInfo.ConvertTime(entry.RecordedAtUtc, session.Database.DisplayTimeZone.TimeZone);
@@ -1403,7 +1437,7 @@ public sealed class TimelineRow
         return new TimelineRow
         {
             Id = entry.Id,
-            TimeLabel = local.ToString("HH:mm"),
+            TimeLabel = showDate ? local.ToString("M/d\nHH:mm") : local.ToString("HH:mm"),
             Title = title,
             Preview = preview,
             FullBody = entry.Body,

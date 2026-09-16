@@ -1,4 +1,4 @@
-FlowNote 0.5.1 핵심 포터블 (Windows x64)
+FlowNote 0.5.2 핵심 포터블 (Windows x64)
 
 1. 이 폴더의 FlowNote.Desktop.exe를 실행하세요. 설치가 필요 없습니다.
 2. 기록은 %LOCALAPPDATA%\FlowNote\live 에 남습니다. 실행 파일 옆이 아닙니다.

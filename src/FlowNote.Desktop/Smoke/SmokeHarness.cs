@@ -456,10 +456,24 @@ internal sealed class SmokeHarness
             }
         }
 
+        var searchIds = _mainVm.Rows.Select(row => row.Id).ToArray();
+        var selectedSearch = _mainVm.Rows.FirstOrDefault();
+        if (selectedSearch is not null) _mainVm.Select(selectedSearch);
+        _mainVm.SearchText = "아직 실행하지 않은 새 검색어";
+        _session.NotifyDataChanged();
+        await WaitForLayoutAsync();
+        if (!searchIds.SequenceEqual(_mainVm.Rows.Select(row => row.Id))
+            || !_mainVm.SummaryText.StartsWith("전체 기록에서 검색", StringComparison.Ordinal))
+            _failed.Add("백그라운드 갱신이 적용된 검색 결과를 지웠습니다.");
+        if (selectedSearch is not null && !_mainVm.HasDetail)
+            _failed.Add("검색 결과 선택이 백그라운드 갱신으로 사라졌습니다.");
+        _mainVm.SearchText = "보드 전원";
         WindowCapture.Save(_main, Path.Combine(_outputDir, "15-search-results.png"));
         TryScreen(_main, "15-search-results-window.png");
         _mainVm.SearchText = "__no_result_dc_audit_0916__";
         _mainVm.SearchCommand.Execute(null);
+        await WaitForLayoutAsync();
+        _session.NotifyDataChanged();
         await WaitForLayoutAsync();
         if (!_mainVm.ShowEmpty || _mainVm.EmptyPrimary != "검색 결과가 없습니다")
             _failed.Add("검색 결과 없음 상태가 보이지 않습니다.");
@@ -473,7 +487,22 @@ internal sealed class SmokeHarness
         _mainVm.OpenFlowCommand.Execute(null);
         _session.SetViewMode(TimelineViewMode.Panorama);
         await WaitForLayoutAsync();
-        _notes.Add("verified=search-from-panorama,todos,settings;empty-search;assembly-version");
+        if (!_mainVm.PanoramaSegments.Any(row => row.Kind == PanoramaSegmentKind.Official
+            && row.StatusLabel == "다시 열림"))
+            _failed.Add("파노라마에서 완료 실행 취소 이력이 누락됐습니다.");
+        var reopened = _mainVm.PanoramaSegments.FirstOrDefault(row => row.Kind == PanoramaSegmentKind.Official
+            && row.StatusLabel == "다시 열림");
+        if (reopened is not null)
+            _mainVm.TogglePanoramaSegmentCommand.Execute(reopened);
+        _mainVm.CloseDetail();
+        await WaitForLayoutAsync();
+        var reopenedButton = VisualTreeScan.Find<Button>(_main)
+            .FirstOrDefault(button => ReferenceEquals(button.CommandParameter, reopened));
+        reopenedButton?.BringIntoView();
+        await WaitForLayoutAsync();
+        WindowCapture.Save(_main, Path.Combine(_outputDir, "17-panorama-lifecycle.png"));
+        TryScreen(_main, "17-panorama-lifecycle-window.png");
+        _notes.Add("verified=search-from-panorama,todos,settings;search-survives-refresh;empty-search-survives-refresh;assembly-version;panorama-reopen");
     }
 
     private async Task CaptureV3Async()

@@ -351,6 +351,22 @@ public sealed class SqliteAssistStore
     {
         return _executor.Write((connection, transaction) =>
         {
+            using (var exhausted = connection.CreateCommand())
+            {
+                exhausted.Transaction = transaction;
+                exhausted.CommandText = """
+                    UPDATE analysis_jobs
+                    SET status = 'failed', error_code = 'max-attempts',
+                        lease_until_utc = NULL, next_attempt_utc = NULL, updated_at_utc = $now
+                    WHERE attempts >= $max AND (
+                        status IN ('pending', 'retry_wait')
+                        OR (status = 'running' AND lease_until_utc IS NOT NULL AND lease_until_utc <= $now));
+                    """;
+                exhausted.Parameters.AddWithValue("$max", AssistVersions.MaxAttempts);
+                exhausted.Parameters.AddWithValue("$now", UtcInstant.ToStorage(nowUtc));
+                exhausted.ExecuteNonQuery();
+            }
+
             using var select = connection.CreateCommand();
             select.Transaction = transaction;
             select.CommandText = """
@@ -476,6 +492,8 @@ public sealed class SqliteAssistStore
             if (liveJob is null
                 || liveJob.Status != AnalysisJobStatus.Running
                 || liveJob.Attempts != job.Attempts
+                || liveJob.LeaseUntilUtc is null
+                || liveJob.LeaseUntilUtc <= _clock.UtcNow
                 || !string.Equals(liveJob.EntryRevision, job.EntryRevision, StringComparison.Ordinal))
             {
                 return "stale-lease";

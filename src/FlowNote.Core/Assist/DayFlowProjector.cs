@@ -29,7 +29,7 @@ public static class DayFlowProjector
 
         foreach (var entry in ordered)
         {
-            if (entry.Kind is EntryKind.TaskCompleted or EntryKind.TaskCancelled)
+            if (entry.Kind is EntryKind.TaskCompleted or EntryKind.TaskCancelled or EntryKind.TaskReopened)
             {
                 official.Add(new DayFlowOfficialMarker
                 {
@@ -37,10 +37,15 @@ public static class DayFlowProjector
                     ThreadId = entry.WorkItemId is not null && workToThread.TryGetValue(entry.WorkItemId, out var officialThread)
                         ? officialThread.Id
                         : "",
-                    Title = entry.Kind == EntryKind.TaskCompleted ? "공식 완료" : "공식 취소",
+                    Title = entry.Kind switch
+                    {
+                        EntryKind.TaskCompleted => "공식 완료",
+                        EntryKind.TaskReopened => "다시 열림",
+                        _ => "공식 취소"
+                    },
                     Kind = entry.Kind
                 });
-                if (entry.WorkItemId is not null &&
+                if (entry.Kind != EntryKind.TaskReopened && entry.WorkItemId is not null &&
                     workToThread.TryGetValue(entry.WorkItemId, out var closeThread) &&
                     open is not null &&
                     open.ThreadId == closeThread.Id)

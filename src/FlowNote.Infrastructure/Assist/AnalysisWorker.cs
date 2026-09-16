@@ -41,7 +41,16 @@ public sealed class AnalysisWorker : IDisposable
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var processed = await ProcessOneAsync(cancellationToken);
+            bool processed;
+            try
+            {
+                processed = await ProcessOneAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             if (!processed)
             {
                 try
@@ -89,6 +98,7 @@ public sealed class AnalysisWorker : IDisposable
     public async Task<bool> ProcessOneAsync(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
         var job = _database.Assist.ClaimNextJob(_clock.UtcNow);
         if (job is null)
         {
@@ -172,13 +182,19 @@ public sealed class AnalysisWorker : IDisposable
                 }
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             _ = _database.Assist.ApplyInference(job, entry, result, origin);
             _consecutiveFailures = 0;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, "worker-stopped", null, _clock.UtcNow - started, job.Attempts);
+            throw;
+        }
         catch (OperationCanceledException)
         {
-            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Stale, "cancelled", null, _clock.UtcNow - started, job.Attempts);
-            throw;
+            RegisterFailure();
+            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, "model-timeout", null, _clock.UtcNow - started, job.Attempts);
         }
         catch (Exception)
         {

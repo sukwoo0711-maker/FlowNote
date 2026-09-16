@@ -52,7 +52,7 @@ if ($iscc) {
     Copy-Item -Recurse -Force (Join-Path $publishDir "*") $appDir
     $iss = Join-Path $root "packaging\setup-core.iss"
     Write-Host "Building core setup with $iscc"
-    & $iscc $iss
+    & $iscc "/DMyAppVersion=$version" $iss
     if ($LASTEXITCODE -ne 0) {
         throw "Inno Setup failed with exit $LASTEXITCODE"
     }

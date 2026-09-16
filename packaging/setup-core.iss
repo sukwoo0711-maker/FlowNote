@@ -1,5 +1,7 @@
 #define MyAppName "FlowNote"
-#define MyAppVersion "0.5.1"
+#ifndef MyAppVersion
+#define MyAppVersion "0.5.2"
+#endif
 #define MyAppPublisher "sukwoo0711-maker"
 #define MyAppURL "https://github.com/sukwoo0711-maker/FlowNote"
 #define MyAppExeName "FlowNote.Desktop.exe"

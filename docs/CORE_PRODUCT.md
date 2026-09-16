@@ -109,3 +109,8 @@ Core 78 · Infrastructure 60 · `--smoke` 2회 PASS (격리 `artifacts/smoke-dat
 규칙 경로 정확도(이번 단위 테스트): 대표 A/B·계획·요청·혼합 mention·이슈키≠수행은 기대대로. 단서 부족은 Abstain/미연결. 모든 메모를 보류로 처리해 성공 처리하지 않았다.
 
 실제 모델 경로: NOT RUN. 저장된 모델 FAIL와 분리해서 보존한다.
+
+
+## 0.5.2 후속 수리
+
+현재 기준은 `docs/releases/0.5.2.md`와 동일 빌드의 `verification.json`이다. 검색 보존·파노라마 다시 열림·분석 큐 경계만 수리하며 모델과 타이머는 확장하지 않는다.
