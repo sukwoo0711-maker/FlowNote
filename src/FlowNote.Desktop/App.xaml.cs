@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
@@ -305,7 +305,10 @@ public partial class App : System.Windows.Application
             ShowTrayBalloonOnce();
         };
         SetupTray();
-        _main.Show();
+        if (args.Demo || _smoke)
+        {
+            _main.Show();
+        }
         _floating.Show();
         if (!_smoke)
         {
@@ -532,7 +535,9 @@ public partial class App : System.Windows.Application
             {
             }
         };
-        _workerTask = _worker.RunAsync(_assistCts.Token);
+        var worker = _worker;
+        var token = _assistCts.Token;
+        _workerTask = Task.Run(() => worker.RunAsync(token));
     }
 
     private void StopAssistWorker()

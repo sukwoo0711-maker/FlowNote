@@ -4,7 +4,9 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$version = "0.5.0"
+[xml]$buildProps = Get-Content -LiteralPath (Join-Path $root "Directory.Build.props") -Raw
+$version = [string]$buildProps.Project.PropertyGroup.Version
+if ([string]::IsNullOrWhiteSpace($version)) { throw "Missing product version" }
 $publishDir = Join-Path $root "artifacts\win-x64"
 $stageName = "FlowNote-$version-win-x64-core"
 $stageDir = Join-Path $root "artifacts\package\$stageName"

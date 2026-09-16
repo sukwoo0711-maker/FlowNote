@@ -353,6 +353,10 @@ internal sealed class SmokeHarness
             }
 
             await WaitForLayoutAsync();
+            if (_mainVm.HasDetail && VisualTreeScan.Find<EntryDetailPane>(_main).Count(pane => pane.IsVisible) != 1)
+            {
+                _failed.Add("좁은 창에서 선택한 기록 상세가 보이지 않습니다.");
+            }
             WindowCapture.Save(_main, Path.Combine(_outputDir, "11-main-narrow.png"));
             _main.Width = 1280;
         }
@@ -414,6 +418,7 @@ internal sealed class SmokeHarness
             _failed.Add("완료한 할 일이 활성 목록에 남아 있습니다.");
         }
 
+        await VerifySearchNavigationAsync();
         var resultPath = Path.Combine(_outputDir, "smoke-result.txt");
         if (_failed.Count > 0)
         {
@@ -431,6 +436,44 @@ internal sealed class SmokeHarness
             notes={string.Join(" | ", _notes)}
             """);
         return 0;
+    }
+
+    private async Task VerifySearchNavigationAsync()
+    {
+        await WaitAssistIdleAsync();
+        foreach (var page in new[] { "panorama", "todos", "settings" })
+        {
+            if (page == "panorama") _session.SetViewMode(TimelineViewMode.Panorama);
+            else if (page == "todos") _mainVm.OpenTodosCommand.Execute(null);
+            else _mainVm.OpenSettingsCommand.Execute(null);
+            _mainVm.SearchText = "보드 전원";
+            _mainVm.SearchCommand.Execute(null);
+            await WaitForLayoutAsync();
+            if (!_mainVm.IsFlow || !_mainVm.IsChronological || !_mainVm.ShowTimeline
+                || !_mainVm.Rows.Any(row => row.FullBody.Contains("보드 전원", StringComparison.Ordinal)))
+            {
+                _failed.Add("검색 결과가 표시되지 않았습니다: " + page);
+            }
+        }
+
+        WindowCapture.Save(_main, Path.Combine(_outputDir, "15-search-results.png"));
+        TryScreen(_main, "15-search-results-window.png");
+        _mainVm.SearchText = "__no_result_dc_audit_0916__";
+        _mainVm.SearchCommand.Execute(null);
+        await WaitForLayoutAsync();
+        if (!_mainVm.ShowEmpty || _mainVm.EmptyPrimary != "검색 결과가 없습니다")
+            _failed.Add("검색 결과 없음 상태가 보이지 않습니다.");
+        _mainVm.SearchText = "";
+        _mainVm.SearchCommand.Execute(null);
+        _mainVm.OpenSettingsCommand.Execute(null);
+        await WaitForLayoutAsync();
+        if (!VisualTreeScan.Find<TextBlock>(_main).Any(text => text.Text == _mainVm.AppVersionText))
+            _failed.Add("설정에 앱 버전이 표시되지 않습니다.");
+        WindowCapture.Save(_main, Path.Combine(_outputDir, "16-app-version.png"));
+        _mainVm.OpenFlowCommand.Execute(null);
+        _session.SetViewMode(TimelineViewMode.Panorama);
+        await WaitForLayoutAsync();
+        _notes.Add("verified=search-from-panorama,todos,settings;empty-search;assembly-version");
     }
 
     private async Task CaptureV3Async()

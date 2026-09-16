@@ -470,7 +470,7 @@ public sealed class DayFlowProjectorTests
         var marks = DayFlowReadModel.MarkSameWorkReturns(
         [
             (true, "a"),
-            (false, "b"),
+            (true, "b"),
             (true, "a"),
             (true, "a")
         ]);

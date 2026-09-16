@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using FlowNote.Desktop.Theming;
@@ -42,7 +42,8 @@ public partial class MainWindow : Window
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        _viewModel.SetNarrow(ActualWidth < 960);
+        var navWidth = ActualWidth < 1000 ? 68 : 220;
+        _viewModel.SetNarrow(ActualWidth - navWidth - 352 - 64 < 560);
         _viewModel.SetNavRail(ActualWidth < 1000);
         ApplyDetailLayout();
     }

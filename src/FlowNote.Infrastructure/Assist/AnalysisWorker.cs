@@ -101,7 +101,7 @@ public sealed class AnalysisWorker : IDisposable
             var entry = await _database.Entries.GetByIdAsync(job.EntryId, cancellationToken);
             if (entry is null || entry.DeletedAtUtc is not null)
             {
-                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Stale, "missing-entry", null, _clock.UtcNow - started);
+                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Stale, "missing-entry", null, _clock.UtcNow - started, job.Attempts);
                 Completed?.Invoke();
                 return true;
             }
@@ -109,7 +109,7 @@ public sealed class AnalysisWorker : IDisposable
             var settings = _database.Assist.GetSettings();
             if (settings.Mode == AssistMode.Off)
             {
-                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "assist-off", null, _clock.UtcNow - started);
+                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "assist-off", null, _clock.UtcNow - started, job.Attempts);
                 Completed?.Invoke();
                 return true;
             }
@@ -117,7 +117,7 @@ public sealed class AnalysisWorker : IDisposable
             var noteBytes = System.Text.Encoding.UTF8.GetByteCount(entry.Body);
             if (noteBytes > AssistVersions.MaxInputUtf8Bytes)
             {
-                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "analysis-too-long", null, _clock.UtcNow - started);
+                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "analysis-too-long", null, _clock.UtcNow - started, job.Attempts);
                 Completed?.Invoke();
                 return true;
             }
@@ -155,7 +155,7 @@ public sealed class AnalysisWorker : IDisposable
             }
             else if (_clock.UtcNow < _circuitUntil)
             {
-                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "model-unavailable", null, _clock.UtcNow - started);
+                _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Blocked, "model-unavailable", null, _clock.UtcNow - started, job.Attempts);
                 Completed?.Invoke();
                 return true;
             }
@@ -166,7 +166,7 @@ public sealed class AnalysisWorker : IDisposable
                 if (string.Equals(result.ErrorCode, "model-unavailable-retry", StringComparison.Ordinal))
                 {
                     RegisterFailure();
-                    _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, result.ErrorCode, null, _clock.UtcNow - started);
+                    _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, result.ErrorCode, null, _clock.UtcNow - started, job.Attempts);
                     Completed?.Invoke();
                     return true;
                 }
@@ -177,13 +177,13 @@ public sealed class AnalysisWorker : IDisposable
         }
         catch (OperationCanceledException)
         {
-            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Stale, "cancelled", null, _clock.UtcNow - started);
+            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Stale, "cancelled", null, _clock.UtcNow - started, job.Attempts);
             throw;
         }
         catch (Exception)
         {
             RegisterFailure();
-            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, "worker-exception", null, _clock.UtcNow - started);
+            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, "worker-exception", null, _clock.UtcNow - started, job.Attempts);
         }
 
         Completed?.Invoke();

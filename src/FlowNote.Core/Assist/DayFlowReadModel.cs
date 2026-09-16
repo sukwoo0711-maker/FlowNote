@@ -5,30 +5,19 @@ public static class DayFlowReadModel
     public static bool[] MarkSameWorkReturns(IReadOnlyList<(bool IsWorkSegment, string ThreadId)> ordered)
     {
         var marks = new bool[ordered.Count];
-        var leftSince = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var seenWork = new HashSet<string>(StringComparer.Ordinal);
+        string? previousWork = null;
         for (var i = 0; i < ordered.Count; i++)
         {
             var item = ordered[i];
-            if (string.IsNullOrEmpty(item.ThreadId))
+            if (!item.IsWorkSegment || string.IsNullOrEmpty(item.ThreadId))
             {
                 continue;
             }
 
-            if (item.IsWorkSegment)
-            {
-                marks[i] = leftSince.GetValueOrDefault(item.ThreadId);
-                leftSince[item.ThreadId] = false;
-            }
-
-            foreach (var key in leftSince.Keys.ToList())
-            {
-                if (key != item.ThreadId)
-                {
-                    leftSince[key] = true;
-                }
-            }
-
-            leftSince.TryAdd(item.ThreadId, false);
+            marks[i] = previousWork != item.ThreadId && seenWork.Contains(item.ThreadId);
+            seenWork.Add(item.ThreadId);
+            previousWork = item.ThreadId;
         }
 
         return marks;

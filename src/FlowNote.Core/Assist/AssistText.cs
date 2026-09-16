@@ -58,7 +58,8 @@ public static class AssistText
 
     public static bool LooksCompletionMention(string text)
     {
-        if (string.IsNullOrWhiteSpace(text) || text.Contains("재현 안", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(text)
+            || ContainsAny(text, "재현 안", "아직", "할 수 없", "완료하지", "끝내지", "마치지", "못했", "못함"))
         {
             return false;
         }
@@ -80,7 +81,7 @@ public static class AssistText
         }
 
         return text
-            .Split(['.', '。', '!', '?', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Split(['.', '。', '!', '?', ';', ',', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .ToList();
     }
 

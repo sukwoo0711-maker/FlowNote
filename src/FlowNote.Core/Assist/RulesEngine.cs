@@ -14,6 +14,11 @@ public sealed class RulesEngine
             return DecideMixed(request);
         }
 
+        return DecideSingle(request);
+    }
+
+    private InferenceResult DecideSingle(InferenceRequest request)
+    {
         var role = AssistText.ClassifyRole(request.NoteText);
         var keys = AssistText.IssueKeys(request.NoteText);
         var unique = keys
@@ -97,23 +102,26 @@ public sealed class RulesEngine
     private InferenceResult DecideMixed(InferenceRequest request)
     {
         var clauses = AssistText.Clauses(request.NoteText);
-        var performClause = clauses.FirstOrDefault(AssistText.LooksPerformed) ?? request.NoteText;
-        var deferClause = clauses.FirstOrDefault(AssistText.LooksDeferred);
-        var primary = Decide(ForClause(request, performClause), false, false);
-        if (primary.Decision is not AssistDecision.Link and not AssistDecision.New)
+        var performing = clauses.Where(clause => AssistText.LooksPerformed(clause)
+            && !AssistText.LooksDeferred(clause) && !AssistText.LooksPlan(clause)).ToList();
+        var deferredClauses = clauses.Where(AssistText.LooksDeferred).ToList();
+        // Never recurse on a clause that contains both intents.
+        if (performing.Count != 1 || deferredClauses.Count != 1)
+        {
+            return Abstain(request.EntryId, "mixed-clause-ambiguous");
+        }
+
+        var primary = DecideSingle(ForClause(request, performing[0]));
+        if (primary.Primary is null || primary.Decision is not (AssistDecision.Link or AssistDecision.New))
         {
             return primary;
         }
 
-        if (deferClause is null)
-        {
-            return primary;
-        }
-
-        var deferred = Decide(ForClause(request, deferClause), false, false);
-        if (deferred.Decision != AssistDecision.Link
-            || deferred.Primary?.ThreadId is null
-            || string.Equals(deferred.Primary.ThreadId, primary.Primary?.ThreadId, StringComparison.Ordinal))
+        var deferred = DecideSingle(ForClause(request, deferredClauses[0]));
+        if (deferred.Primary is not { } secondary
+            || deferred.Decision is not (AssistDecision.Link or AssistDecision.New)
+            || (secondary.ThreadId is not null && secondary.ThreadId == primary.Primary.ThreadId)
+            || (secondary.TopicQuote is not null && secondary.TopicQuote == primary.Primary.TopicQuote))
         {
             return primary;
         }
@@ -122,22 +130,15 @@ public sealed class RulesEngine
         {
             EntryId = request.EntryId,
             Decision = primary.Decision,
-            Primary = new InferencePrimary
-            {
-                ThreadId = primary.Primary?.ThreadId,
-                TopicQuote = primary.Primary?.TopicQuote,
-                Role = ContextRole.Performed,
-                SourceQuote = primary.Primary?.SourceQuote ?? performClause,
-                NextActionQuote = primary.Primary?.NextActionQuote
-            },
+            Primary = primary.Primary,
             Mentions =
             [
                 new InferencePrimary
                 {
-                    ThreadId = deferred.Primary.ThreadId,
-                    TopicQuote = deferred.Primary.TopicQuote,
+                    ThreadId = secondary.ThreadId,
+                    TopicQuote = secondary.TopicQuote,
                     Role = ContextRole.RequestLater,
-                    SourceQuote = deferred.Primary.SourceQuote
+                    SourceQuote = secondary.SourceQuote
                 }
             ],
             IsFake = false

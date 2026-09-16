@@ -75,7 +75,7 @@ public enum TitleOrigin
 
 public static class AssistVersions
 {
-    public const string RulesVersion = "v4-r1";
+    public const string RulesVersion = "v4-r2";
     public const string PolicyVersion = "v4-p1";
     public const string ModelTag = "Qwen3-4B-Q4_K_M";
     public const string RulesDigestToken = "rules";

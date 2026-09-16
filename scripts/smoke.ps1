@@ -15,7 +15,7 @@ if (Test-Path $dataRoot) { Remove-Item -Recurse -Force $dataRoot }
 if (Test-Path $smokeOut) { Remove-Item -Recurse -Force $smokeOut }
 New-Item -ItemType Directory -Force -Path $dataRoot, $smokeOut, (Join-Path $root "docs\screenshots") | Out-Null
 
-Get-Process -Name FlowNote.Desktop -ErrorAction SilentlyContinue | Stop-Process -Force
+# Smoke uses its own data profile and mutex; never terminate a user instance.
 
 $common = @("--smoke", "--data-root", $dataRoot, "--smoke-out", $smokeOut)
 

@@ -278,6 +278,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ObservableCollection<string> RecentNoteLines { get; } = [];
 
+    public string AppVersionText => "FlowNote " +
+        (typeof(MainViewModel).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion
+            ?? typeof(MainViewModel).Assembly.GetName().Version?.ToString() ?? "unknown");
+
     public string SettingsPath => Session.Database.Paths.Root;
 
     public string SettingsMode => Session.IsDemo ? "데모 저장소" : "이 PC의 일반 저장소";
@@ -300,7 +305,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public bool IsNavRail { get; private set; }
 
-    public string EmptyPrimary => "아직 기록이 없습니다";
+    public string EmptyPrimary => EmptyText;
 
     private MainPage _page = MainPage.Flow;
     private bool _showWorkContext;
@@ -587,6 +592,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private void RunSearch()
     {
+        SetPage(MainPage.Flow);
+        CloseDetail();
+        if (Session.ViewMode != TimelineViewMode.Chronological)
+        {
+            Session.SetViewMode(TimelineViewMode.Chronological);
+        }
+
         if (string.IsNullOrWhiteSpace(SearchText))
         {
             Reload();
@@ -594,6 +606,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         var found = Session.Database.Entries.Search(SearchText);
+        MinimapLanes.Clear();
+        Raise(nameof(HasMinimap));
         Rows.Clear();
         foreach (var entry in found)
         {
@@ -602,7 +616,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         HasRows = Rows.Count > 0;
         EmptyText = HasRows ? "" : "검색 결과가 없습니다";
-        SummaryText = $"검색 {Rows.Count}개";
+        HasDayEntries = HasRows;
+        SummaryText = $"전체 기록에서 검색 · {Rows.Count}개";
+        Raise(nameof(HasDayEntries));
+        Raise(nameof(EmptyPrimary));
         Raise(nameof(SummaryText));
         Raise(nameof(HasRows));
         Raise(nameof(EmptyText));
@@ -1300,6 +1317,8 @@ public sealed class TimelineRow
     public bool ShowAssistBadge => !string.IsNullOrWhiteSpace(AssistBadgeText);
 
     public string AssistDetailText { get; init; } = "";
+
+    public string ExpandedText => string.IsNullOrWhiteSpace(FullBody) ? Title : FullBody;
 
     public string DisplayPreview => NoteDisplayRules.DisplayPreview(Title, Preview);
 

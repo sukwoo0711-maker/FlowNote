@@ -399,11 +399,17 @@ public sealed class SqliteAssistStore
         });
     }
 
-    public void FinishJob(string jobId, AnalysisJobStatus status, string? errorCode, string? resultJson, TimeSpan elapsed)
+    public void FinishJob(string jobId, AnalysisJobStatus status, string? errorCode, string? resultJson, TimeSpan elapsed, int? expectedAttempt = null)
     {
         _executor.Write((connection, transaction) =>
         {
             var existing = ReadJob(connection, transaction, jobId);
+            if (existing is null || (expectedAttempt is { } attempt
+                && (existing.Status != AnalysisJobStatus.Running || existing.Attempts != attempt)))
+            {
+                return 0;
+            }
+
             if (status == AnalysisJobStatus.RetryWait && existing is { Attempts: >= AssistVersions.MaxAttempts })
             {
                 status = AnalysisJobStatus.Failed;
@@ -500,6 +506,16 @@ public sealed class SqliteAssistStore
             {
                 FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "policy-changed", null, job.Attempts);
                 return "stale-policy";
+            }
+
+            var activeDigest = settings.Mode == AssistMode.LocalAssist
+                ? settings.LockedDigest ?? settings.ModelTag
+                : AssistVersions.RulesDigestToken;
+            if (job.ModelDigest != activeDigest || job.RulesVersion != AssistVersions.RulesVersion
+                || job.PromptVersion != PromptCatalog.PromptVersion)
+            {
+                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "analysis-version-changed", null, job.Attempts);
+                return "stale-analysis-version";
             }
 
             entry = live;
