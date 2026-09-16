@@ -1,5 +1,7 @@
 # 검수 결과
 
+현행 핵심 제품 검수는 `docs/CORE_PRODUCT.md`다. 아래는 2026-09-15 V3 기록이다.
+
 기록일: 2026-09-15  
 단계: V3 제품 흐름. 외형 최종 승인 아님. 판매 성공·해자 확보를 이 결과로 주장하지 않는다.  
 앱 빌드: FlowNote.Desktop Release / `net10.0-windows` / SDK 10.0.401 / self-contained win-x64  

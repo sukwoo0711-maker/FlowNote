@@ -98,6 +98,21 @@ public sealed class V3ScenarioAndReportTests
         using var restored = new FlowNote.Infrastructure.FlowNoteDatabase(restorePaths, temp.Clock, temp.TimeZone);
         var item = await restored.WorkItems.GetAsync(created.WorkItem.Id);
         Assert.Equal("복원되어야 함", item!.NextActionText);
+        Assert.True(File.Exists(Path.Combine(backupDir, "backup-manifest.json")));
+    }
+
+    [Fact]
+    public async Task Restore_rejects_tampered_manifest_file()
+    {
+        using var temp = new TempDatabase();
+        await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest { RequestId = "bak", Body = "원문" });
+        var backupDir = Path.Combine(temp.Root, "backup-hash");
+        temp.Database.Backups.BackupTo(backupDir);
+        var db = Path.Combine(backupDir, "flownote.db");
+        await File.AppendAllTextAsync(db, "tamper");
+        var dest = Path.Combine(temp.Root, "should-not-restore");
+        Assert.Throws<InvalidDataException>(() => temp.Database.Backups.RestoreFrom(backupDir, dest));
+        Assert.False(File.Exists(Path.Combine(dest, "flownote.db")));
     }
 
     [Fact]

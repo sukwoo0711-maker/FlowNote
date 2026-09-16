@@ -26,6 +26,8 @@ public sealed class SqliteAssistStore
         _clock = clock;
     }
 
+    public event Action? JobQueued;
+
     public AssistSettings GetSettings()
         => _executor.Read(connection => ReadSettings(connection, null));
 
@@ -36,6 +38,17 @@ public sealed class SqliteAssistStore
             var current = ReadSettings(connection, transaction);
             WriteSetting(connection, transaction, ModeKey, AssistCodec.Mode(mode));
             WriteSetting(connection, transaction, PolicyKey, (current.PolicyRevision + 1).ToString());
+            using var stale = connection.CreateCommand();
+            stale.Transaction = transaction;
+            stale.CommandText = """
+                UPDATE analysis_jobs
+                SET status = 'stale',
+                    error_code = 'policy-changed',
+                    updated_at_utc = $now
+                WHERE status IN ('pending', 'retry_wait', 'running', 'blocked');
+                """;
+            stale.Parameters.AddWithValue("$now", UtcInstant.ToStorage(_clock.UtcNow));
+            stale.ExecuteNonQuery();
             return 0;
         });
     }
@@ -236,8 +249,83 @@ public sealed class SqliteAssistStore
     public AnalysisJob? LatestJob(string entryId)
         => ListJobs(entryId).LastOrDefault();
 
+    public IReadOnlyDictionary<string, AnalysisJob> LatestJobs(IReadOnlyList<string> entryIds)
+    {
+        if (entryIds.Count == 0)
+        {
+            return new Dictionary<string, AnalysisJob>(StringComparer.Ordinal);
+        }
+
+        return _executor.Read(connection =>
+        {
+            using var command = connection.CreateCommand();
+            var names = new List<string>(entryIds.Count);
+            for (var i = 0; i < entryIds.Count; i++)
+            {
+                var name = "$e" + i;
+                names.Add(name);
+                command.Parameters.AddWithValue(name, entryIds[i]);
+            }
+
+            command.CommandText = $"""
+                SELECT * FROM analysis_jobs
+                WHERE entry_id IN ({string.Join(",", names)})
+                ORDER BY created_at_utc ASC;
+                """;
+            using var reader = command.ExecuteReader();
+            var latest = new Dictionary<string, AnalysisJob>(StringComparer.Ordinal);
+            while (reader.Read())
+            {
+                var job = MapJob(reader);
+                latest[job.EntryId] = job;
+            }
+
+            return (IReadOnlyDictionary<string, AnalysisJob>)latest;
+        });
+    }
+
     public IReadOnlyList<ContextMention> ListMentions(string entryId)
         => _executor.Read(connection => ListMentions(connection, null, entryId));
+
+    public IReadOnlyDictionary<string, IReadOnlyList<ContextMention>> ListMentionsForEntries(IReadOnlyList<string> entryIds)
+    {
+        if (entryIds.Count == 0)
+        {
+            return new Dictionary<string, IReadOnlyList<ContextMention>>(StringComparer.Ordinal);
+        }
+
+        return _executor.Read(connection =>
+        {
+            using var command = connection.CreateCommand();
+            var names = new List<string>(entryIds.Count);
+            for (var i = 0; i < entryIds.Count; i++)
+            {
+                var name = "$e" + i;
+                names.Add(name);
+                command.Parameters.AddWithValue(name, entryIds[i]);
+            }
+
+            command.CommandText = $"SELECT * FROM context_mentions WHERE entry_id IN ({string.Join(",", names)});";
+            using var reader = command.ExecuteReader();
+            var map = new Dictionary<string, List<ContextMention>>(StringComparer.Ordinal);
+            while (reader.Read())
+            {
+                var mention = MapMention(reader);
+                if (!map.TryGetValue(mention.EntryId, out var list))
+                {
+                    list = [];
+                    map[mention.EntryId] = list;
+                }
+
+                list.Add(mention);
+            }
+
+            return map.ToDictionary(
+                static item => item.Key,
+                static item => (IReadOnlyList<ContextMention>)item.Value,
+                StringComparer.Ordinal);
+        });
+    }
 
     public IReadOnlyList<ActionCandidate> ListActionCandidates(string entryId)
         => _executor.Read(connection =>
@@ -315,6 +403,20 @@ public sealed class SqliteAssistStore
     {
         _executor.Write((connection, transaction) =>
         {
+            var existing = ReadJob(connection, transaction, jobId);
+            if (status == AnalysisJobStatus.RetryWait && existing is { Attempts: >= AssistVersions.MaxAttempts })
+            {
+                status = AnalysisJobStatus.Failed;
+                errorCode = "max-attempts";
+            }
+
+            DateTimeOffset? next = null;
+            if (status == AnalysisJobStatus.RetryWait)
+            {
+                var delay = existing is { Attempts: <= 1 } ? 5 : 30;
+                next = _clock.UtcNow.AddSeconds(delay);
+            }
+
             var now = UtcInstant.ToStorage(_clock.UtcNow);
             using var update = connection.CreateCommand();
             update.Transaction = transaction;
@@ -329,13 +431,6 @@ public sealed class SqliteAssistStore
                 """;
             update.Parameters.AddWithValue("$status", AssistCodec.JobStatus(status));
             update.Parameters.AddWithValue("$error", (object?)errorCode ?? DBNull.Value);
-            DateTimeOffset? next = null;
-            if (status == AnalysisJobStatus.RetryWait)
-            {
-                var job = ReadJob(connection, transaction, jobId);
-                var delay = job is { Attempts: <= 1 } ? 5 : 30;
-                next = _clock.UtcNow.AddSeconds(delay);
-            }
 
             update.Parameters.AddWithValue("$next", next is null ? DBNull.Value : UtcInstant.ToStorage(next.Value));
             update.Parameters.AddWithValue("$now", now);
@@ -371,31 +466,43 @@ public sealed class SqliteAssistStore
     {
         return _executor.Write((connection, transaction) =>
         {
-            var current = ReadAssignment(connection, transaction, entry.Id);
+            var liveJob = ReadJob(connection, transaction, job.Id);
+            if (liveJob is null
+                || liveJob.Status != AnalysisJobStatus.Running
+                || liveJob.Attempts != job.Attempts
+                || !string.Equals(liveJob.EntryRevision, job.EntryRevision, StringComparison.Ordinal))
+            {
+                return "stale-lease";
+            }
+
+            var live = SqliteEntryService.FindById(connection, transaction, entry.Id);
+            if (live is null || live.DeletedAtUtc is not null)
+            {
+                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "deleted", null, job.Attempts);
+                return "stale-deleted";
+            }
+
+            var current = ReadAssignment(connection, transaction, live.Id);
             if (current is not null && current.CorrectionRevision != job.CorrectionSnapshot)
             {
-                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "correction-changed", null);
+                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "correction-changed", null, job.Attempts);
                 return "stale-correction";
             }
 
-            if (!string.Equals(AssistText.EntryRevision(entry), job.EntryRevision, StringComparison.Ordinal))
+            if (!string.Equals(AssistText.EntryRevision(live), job.EntryRevision, StringComparison.Ordinal))
             {
-                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "revision-changed", null);
+                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "revision-changed", null, job.Attempts);
                 return "stale-revision";
-            }
-
-            if (entry.DeletedAtUtc is not null)
-            {
-                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "deleted", null);
-                return "stale-deleted";
             }
 
             var settings = ReadSettings(connection, transaction);
             if (settings.PolicyRevision != job.PolicyRevision)
             {
-                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "policy-changed", null);
+                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Stale, "policy-changed", null, job.Attempts);
                 return "stale-policy";
             }
+
+            entry = live;
 
             var error = InferenceValidator.Validate(new InferenceRequest
             {
@@ -408,7 +515,7 @@ public sealed class SqliteAssistStore
             }, result);
             if (error is not null)
             {
-                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Failed, error, null);
+                FinishJobInTx(connection, transaction, job.Id, AnalysisJobStatus.Failed, error, null, job.Attempts);
                 return error;
             }
 
@@ -417,7 +524,7 @@ public sealed class SqliteAssistStore
                 var blocked = current is { UserLocked: true } or { Resolution: AssignmentResolution.ManualClear }
                     ? AnalysisJobStatus.Stale
                     : AnalysisJobStatus.Abstained;
-                FinishJobInTx(connection, transaction, job.Id, blocked, result.ErrorCode ?? "policy-rejected", null);
+                FinishJobInTx(connection, transaction, job.Id, blocked, result.ErrorCode ?? "policy-rejected", null, job.Attempts);
                 return "policy-rejected";
             }
 
@@ -427,7 +534,7 @@ public sealed class SqliteAssistStore
             {
                 decision = AssistCodec.Decision(result.Decision),
                 role = result.Primary is null ? null : AssistCodec.Role(result.Primary.Role)
-            }));
+            }), job.Attempts);
             return "applied";
         });
     }
@@ -489,8 +596,12 @@ public sealed class SqliteAssistStore
                 ThreadId = resolvedThread,
                 Origin = AssignmentOrigin.User,
                 Resolution = resolvedThread is null ? AssignmentResolution.ManualClear : AssignmentResolution.Assigned,
-                Role = ContextRole.Unknown,
-                RoleOrigin = AssignmentOrigin.User,
+                Role = resolvedThread is null
+                    ? ContextRole.Unknown
+                    : current?.Role ?? ContextRole.Unknown,
+                RoleOrigin = resolvedThread is null || current is null
+                    ? AssignmentOrigin.User
+                    : current.RoleOrigin,
                 SourceQuote = current?.SourceQuote,
                 AnalysisRunId = null,
                 UserLocked = true,
@@ -628,7 +739,7 @@ public sealed class SqliteAssistStore
         {
             foreach (var alias in AssistText.AliasSeeds(entry.Body).Append(result.Primary?.TopicQuote).OfType<string>())
             {
-                WriteAlias(connection, transaction, alias, threadId);
+                WriteAlias(connection, transaction, alias, threadId, steal: false);
             }
         }
 
@@ -792,6 +903,7 @@ public sealed class SqliteAssistStore
         command.Parameters.AddWithValue("$correction", correctionSnapshot);
         command.Parameters.AddWithValue("$now", now);
         command.ExecuteNonQuery();
+        JobQueued?.Invoke();
     }
 
     private static void StalePendingJobs(SqliteConnection connection, SqliteTransaction transaction, string entryId, string _)
@@ -878,24 +990,34 @@ public sealed class SqliteAssistStore
         command.ExecuteNonQuery();
         if (!string.IsNullOrWhiteSpace(title) && title.Length >= 2)
         {
-            WriteAlias(connection, transaction, title, id);
+            WriteAlias(connection, transaction, title, id, steal: origin == TitleOrigin.User);
         }
 
         return ReadThread(connection, transaction, id) ?? throw new InvalidOperationException("thread insert failed");
     }
 
-    private static void WriteAlias(SqliteConnection connection, SqliteTransaction transaction, string alias, string threadId)
+    private static void WriteAlias(SqliteConnection connection, SqliteTransaction transaction, string alias, string threadId, bool steal = false)
     {
         if (string.IsNullOrWhiteSpace(alias) || alias.Length > AssistVersions.TopicQuoteMax)
         {
             return;
         }
 
+        if (!steal && AssistText.IsAutoAlias(alias))
+        {
+            return;
+        }
+
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = """
+        command.CommandText = steal
+            ? """
             INSERT INTO context_aliases(alias, thread_id) VALUES ($alias, $thread)
             ON CONFLICT(alias) DO UPDATE SET thread_id = excluded.thread_id;
+            """
+            : """
+            INSERT INTO context_aliases(alias, thread_id) VALUES ($alias, $thread)
+            ON CONFLICT(alias) DO NOTHING;
             """;
         command.Parameters.AddWithValue("$alias", alias);
         command.Parameters.AddWithValue("$thread", threadId);
@@ -1036,7 +1158,8 @@ public sealed class SqliteAssistStore
         string jobId,
         AnalysisJobStatus status,
         string? error,
-        string? resultJson)
+        string? resultJson,
+        int? expectedAttempts = null)
     {
         var now = UtcInstant.ToStorage(_clock.UtcNow);
         using var update = connection.CreateCommand();
@@ -1044,12 +1167,14 @@ public sealed class SqliteAssistStore
         update.CommandText = """
             UPDATE analysis_jobs
             SET status = $status, error_code = $error, lease_until_utc = NULL, updated_at_utc = $now
-            WHERE id = $id;
+            WHERE id = $id
+              AND ($expected IS NULL OR (status = 'running' AND attempts = $expected));
             """;
         update.Parameters.AddWithValue("$status", AssistCodec.JobStatus(status));
         update.Parameters.AddWithValue("$error", (object?)error ?? DBNull.Value);
         update.Parameters.AddWithValue("$now", now);
         update.Parameters.AddWithValue("$id", jobId);
+        update.Parameters.AddWithValue("$expected", (object?)expectedAttempts ?? DBNull.Value);
         update.ExecuteNonQuery();
         _ = resultJson;
     }
@@ -1133,21 +1258,24 @@ public sealed class SqliteAssistStore
         var list = new List<ContextMention>();
         while (reader.Read())
         {
-            list.Add(new ContextMention
-            {
-                Id = reader.GetString(reader.GetOrdinal("id")),
-                EntryId = reader.GetString(reader.GetOrdinal("entry_id")),
-                ThreadId = reader.GetString(reader.GetOrdinal("thread_id")),
-                Role = AssistCodec.ParseRole(reader.GetString(reader.GetOrdinal("role"))),
-                SourceQuote = reader.GetString(reader.GetOrdinal("source_quote")),
-                SourceRevision = reader.GetString(reader.GetOrdinal("source_revision")),
-                Origin = AssistCodec.ParseOrigin(reader.GetString(reader.GetOrdinal("origin"))),
-                NextActionQuote = SqliteRowMapper.GetNullString(reader, "next_action_quote")
-            });
+            list.Add(MapMention(reader));
         }
 
         return list;
     }
+
+    private static ContextMention MapMention(SqliteDataReader reader)
+        => new()
+        {
+            Id = reader.GetString(reader.GetOrdinal("id")),
+            EntryId = reader.GetString(reader.GetOrdinal("entry_id")),
+            ThreadId = reader.GetString(reader.GetOrdinal("thread_id")),
+            Role = AssistCodec.ParseRole(reader.GetString(reader.GetOrdinal("role"))),
+            SourceQuote = reader.GetString(reader.GetOrdinal("source_quote")),
+            SourceRevision = reader.GetString(reader.GetOrdinal("source_revision")),
+            Origin = AssistCodec.ParseOrigin(reader.GetString(reader.GetOrdinal("origin"))),
+            NextActionQuote = SqliteRowMapper.GetNullString(reader, "next_action_quote")
+        };
 
     private static EntryContextAssignment MapAssignment(SqliteDataReader reader)
         => new()

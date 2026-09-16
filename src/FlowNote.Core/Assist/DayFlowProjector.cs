@@ -7,7 +7,8 @@ public static class DayFlowProjector
     public static DayFlowProjection Project(
         IReadOnlyList<TimelineEntry> entries,
         IReadOnlyDictionary<string, EntryContextAssignment> assignments,
-        IReadOnlyDictionary<string, ContextThread> threads)
+        IReadOnlyDictionary<string, ContextThread> threads,
+        IReadOnlyDictionary<string, IReadOnlyList<ContextMention>>? mentions = null)
     {
         var ordered = entries
             .Where(static item => item.DeletedAtUtc is null)
@@ -17,7 +18,9 @@ public static class DayFlowProjector
 
         var episodes = new List<OpenEpisode>();
         var requests = new List<DayFlowRequestMarker>();
+        var official = new List<DayFlowOfficialMarker>();
         var unclassified = new List<string>();
+        var counted = new HashSet<string>(StringComparer.Ordinal);
         OpenEpisode? open = null;
         var workToThread = threads.Values
             .Where(static item => item.WorkItemId is not null)
@@ -26,13 +29,25 @@ public static class DayFlowProjector
 
         foreach (var entry in ordered)
         {
-            if (entry.Kind is EntryKind.TaskCompleted or EntryKind.TaskCancelled &&
-                entry.WorkItemId is not null &&
-                workToThread.TryGetValue(entry.WorkItemId, out var closedThread) &&
-                open is not null &&
-                open.ThreadId == closedThread.Id)
+            if (entry.Kind is EntryKind.TaskCompleted or EntryKind.TaskCancelled)
             {
-                open = null;
+                official.Add(new DayFlowOfficialMarker
+                {
+                    EntryId = entry.Id,
+                    ThreadId = entry.WorkItemId is not null && workToThread.TryGetValue(entry.WorkItemId, out var officialThread)
+                        ? officialThread.Id
+                        : "",
+                    Title = entry.Kind == EntryKind.TaskCompleted ? "공식 완료" : "공식 취소",
+                    Kind = entry.Kind
+                });
+                if (entry.WorkItemId is not null &&
+                    workToThread.TryGetValue(entry.WorkItemId, out var closeThread) &&
+                    open is not null &&
+                    open.ThreadId == closeThread.Id)
+                {
+                    open = null;
+                }
+
                 continue;
             }
 
@@ -61,13 +76,17 @@ public static class DayFlowProjector
                 case ContextRole.RequestUnknown:
                 case ContextRole.Plan:
                 case ContextRole.Reference:
-                    requests.Add(new DayFlowRequestMarker
+                    if (counted.Add(entry.Id))
                     {
-                        EntryId = entry.Id,
-                        ThreadId = thread.Id,
-                        Title = thread.Title,
-                        Role = assignment.Role
-                    });
+                        requests.Add(new DayFlowRequestMarker
+                        {
+                            EntryId = entry.Id,
+                            ThreadId = thread.Id,
+                            Title = thread.Title,
+                            Role = assignment.Role
+                        });
+                    }
+
                     break;
                 case ContextRole.Performed:
                 case ContextRole.CompletionMention:
@@ -77,17 +96,62 @@ public static class DayFlowProjector
                         episodes.Add(open);
                     }
 
-                    open.Observed.Add(entry.Id);
-                    open.Times.Add(entry.OccurredAtUtc);
+                    if (counted.Add(entry.Id))
+                    {
+                        open.Observed.Add(entry.Id);
+                        open.Times.Add(entry.OccurredAtUtc);
+                    }
+
                     if (assignment.Role == ContextRole.CompletionMention)
                     {
                         open = null;
                     }
 
                     break;
+                case ContextRole.Unknown:
+                    if (open is null || open.ThreadId != thread.Id)
+                    {
+                        open = new OpenEpisode(thread.Id, thread.Title);
+                        episodes.Add(open);
+                    }
+
+                    if (counted.Add(entry.Id))
+                    {
+                        open.Observed.Add(entry.Id);
+                        open.Times.Add(entry.OccurredAtUtc);
+                    }
+
+                    break;
                 default:
                     unclassified.Add(entry.Id);
                     break;
+            }
+
+            if (mentions is not null && mentions.TryGetValue(entry.Id, out var extras))
+            {
+                foreach (var mention in extras)
+                {
+                    if (mention.Role is not (ContextRole.RequestLater or ContextRole.RequestUnknown or ContextRole.Plan or ContextRole.Reference))
+                    {
+                        continue;
+                    }
+
+                    if (requests.Any(item => item.EntryId == entry.Id && item.ThreadId == mention.ThreadId))
+                    {
+                        continue;
+                    }
+
+                    var title = threads.TryGetValue(mention.ThreadId, out var mentioned)
+                        ? mentioned.Title
+                        : "관련 요청";
+                    requests.Add(new DayFlowRequestMarker
+                    {
+                        EntryId = entry.Id,
+                        ThreadId = mention.ThreadId,
+                        Title = title,
+                        Role = mention.Role
+                    });
+                }
             }
         }
 
@@ -103,6 +167,7 @@ public static class DayFlowProjector
         {
             Episodes = closed,
             RequestMarkers = requests,
+            OfficialMarkers = official,
             UnclassifiedEntryIds = unclassified
         };
     }

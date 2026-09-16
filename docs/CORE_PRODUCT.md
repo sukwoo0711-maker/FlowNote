@@ -46,11 +46,12 @@ FlowNote는 시간순 메모 나열이 아니다. 최근 기록 3개는 입력 �
 ## 실행 빌드
 
 게시 폴더: `artifacts/win-x64/FlowNote.Desktop.exe`  
-캡처: `docs/screenshots/core/12-panorama-ab.png`, `13-panorama-expanded.png`, `14-panorama-unlinked.png`
+공개 패키지: `artifacts/dist/FlowNote-0.5.0-win-x64-core.zip` / `FlowNote-0.5.0-win-x64-core-setup.exe`  
+빌드 ID: `fn-0.5.0`
 
-## 검수 (2026-09-16)
+## 검수 (2026-09-16 출시 스냅샷)
 
-Core 78 · Infrastructure 60 · `--smoke` 2회 PASS (격리 `artifacts/smoke-data`). 규칙 worker만 기동. 새 모델·실행기 없음.
+Core 78 · Infrastructure 60 · `--smoke` 2회 PASS (격리 `artifacts/smoke-data`). 아래 감사 후 검수와 섞지 않는다.
 
 | 조건 | 결과 | 근거 |
 |---|---|---|
@@ -76,6 +77,33 @@ Core 78 · Infrastructure 60 · `--smoke` 2회 PASS (격리 `artifacts/smoke-dat
 
 - 같은 날 다른 업무가 있으면 파노라마 요약 앞에 그 구간이 붙는다. A/B만 있는 날이 아니다.
 - 수행 후속어(초기화·순서·재현 등)만 있는 메모는 직전 수행 업무에 붙인다. 그 단어가 새 업무 이름이면 오연결될 수 있다.
-- 별칭은 전역 유일해서 나중에 같은 단어가 나오면 마지막 업무가 가져간다.
+- 자동 일반 토큰은 전역 별칭을 덮어쓰지 않는다. 사용자 별칭은 여전히 가져갈 수 있다.
 - 펼친 원문은 오른쪽 상세와 구간 토글로 확인할 수 있으나, 구간이 많으면 목록 스크롤이 필요하다.
 - `--assist-smoke` 시드 JSON은 모델 실측이 아니다.
+- 규칙 경로는 대표 A/B와 일부 반례만 검증했다. 새 표현은 Unknown/보류로 남을 수 있다.
+
+## 감사 후 수정 (fn-64337c4-remed-dirty)
+
+`01_READONLY_AUDIT.md` / `03_EVIDENCE_MANIFEST.json`은 저장소에 없었다. 지적 위치는 현재 소스에서 다시 확인한 뒤 고쳤다. 커밋·push·모델 다운로드·패키지 재배포는 하지 않았다.
+
+이번 실행: Core 85 PASS · Infrastructure 67 PASS · 격리 `--smoke` PASS (`artifacts/remed-smoke-data`, `artifacts/remed-smoke-out/smoke-result.txt`, 범위에 `ab-unlabeled-flow`). DPI 1.0. 규칙 경로만. MODEL_REAL 아님.
+
+| ID | 재현 | 수정 | 회귀 | 미검증 | 현재 위치 |
+|---|---|---|---|---|---|
+| F01 | 저장된 72회 모델 FAIL를 이번 실행으로 바꾸지 않음 | 품질 게이트 유지. 규칙 E2E를 MODEL_REAL로 보고하지 않음 | 해당 없음 | 현재 fingerprint 실모델 재평가 | `docs/CORE_PRODUCT.md`, 엔진은 LocalAssist opt-in |
+| F02 | 이슈키/별칭만으로 Performed가 되던 규칙 | 식별과 `ClassifyRole` 분리. 계획/요청/부정/혼합 반례 추가 | Core 85 | 새 구어 표현 일반화 | `AssistText.cs`, `RulesEngine.cs`, `AssistCoreTests.cs` |
+| F03 | 자동 일반 토큰이 마지막 thread 별칭을 훔침 | 자동 별칭 `DO NOTHING`, `IsAutoAlias` 건너뜀 | Infra 별칭/A/B | 사용자 별칭 충돌의 모든 단어 | `SqliteAssistStore.WriteAlias` |
+| F04 | 연결만 바꿔도 Role이 Unknown | 재연결은 Role 유지, 해제는 Unknown+ManualClear, 모델 재부착 불가 | `Relink_keeps_role_*` | UI에서 역할 문구 가독성 | `SqliteAssistStore.CorrectAssignment` |
+| F05 | 늦은 응답이 옛 snapshot으로 succeeded | 트랜잭션 안 live job/entry 재조회, lease 불일치 시 무기록 | 편집/삭제/정정 Barrier 경쟁 3건 | 실제 llama 지연 | `ApplyInference`, `AssistPersistenceTests` |
+| F06 | 250ms 폴링, 하루 N+1 첨부/job | Pulse+2초 복구대기, 첨부/mentions/job 일괄, LiveDots 비가시 정지 | Infra worker·smoke | CPU/메모리 전후 측정, 150% 배율 | `AnalysisWorker`, `MainViewModel.Reload`, `LiveDots` |
+| F07 | 클릭마다 새 request_id, refresh 실패=저장실패 | 제출 request_id 유지, refresh 분리, 제출 초안만 정리, 중복 첨부는 참조 확인 후 삭제 | `Duplicate_request_id_*` | 저장 중 입력+첨부 동시 실기기 | `FloatingViewModel.SaveNoteAsync`, `SqliteEntryService` |
+| F08 | A→A 복귀 오표시, 공식 완료 누락, 혼합 메모 중복 | 다른 업무 개입 시에만 복귀, 공식 마커, mention은 원문 1회 | Core projector/read-model, smoke A/B | 빈 날짜 UI 손탐색 | `DayFlowProjector`, `DayFlowReadModel`, `MainViewModel.ReloadPanorama` |
+| F09 | 투명 버튼 전경 불명, 로컬 BorderBrush가 Trigger 차단, 색 해시 프로세스마다 다름 | 읽기용 Foreground, Style BorderBrush, 결정적 Accent, 내부 상태어는 한글 상세 | Desktop 빌드 | 사람 제목 가독성 판정 | `MainWindow.xaml`, `AccentFor`, `JobStatusLabel` |
+| F10 | 감사 원본 없음. IME/타앱 포커스/150%로 해석 | 코드 경로 유지, 이번 창 검수 없음 | 스모크 자동 입력 | 실 Windows IME·150% | 기존 입력/포커스 코드 |
+| F11 | fire-and-forget, 최대시도 후 영원한 retry_wait | Task 보관, 취소 후 대기·dispose, 취소/timeout/max 구분, 정책 전환 시 과거 job stale | `Max_attempts_finish_as_failed` | 종료 중 긴 Infer 3초 초과 | `App.StopAssistWorker`, `FinishJob`, `SetMode` |
+| F12 | 감사 원본 없음. 패키지/릴리스로 해석 | 0.5.0 경량 핵심 패키지 | 코어 패키지 스크립트 | 엔진·모델 풀팩은 v0.4.0 유지 | `scripts/package-core.ps1`, GitHub `v0.5.0` |
+| F13 | 백업이 해시·aside 없이 덮어씀 | manifest 해시, 임시검증→aside→교체→실패복구 | `Backup_restores_*`, `Restore_rejects_tampered_*` | 운영 DB에 대한 수동 복구 시연 | `SqliteBackupService` |
+
+규칙 경로 정확도(이번 단위 테스트): 대표 A/B·계획·요청·혼합 mention·이슈키≠수행은 기대대로. 단서 부족은 Abstain/미연결. 모든 메모를 보류로 처리해 성공 처리하지 않았다.
+
+실제 모델 경로: NOT RUN. 저장된 모델 FAIL와 분리해서 보존한다.

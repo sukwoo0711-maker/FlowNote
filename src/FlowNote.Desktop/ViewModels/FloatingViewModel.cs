@@ -36,6 +36,7 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
     private CapsuleRecentRow? _peekRow;
     private string _pinnedTitle = "";
     private string _pinnedKindLabel = "";
+    private string? _submitRequestId;
 
     public FloatingViewModel(AppSession session)
     {
@@ -565,11 +566,14 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         {
             StatusText = "기록 중";
             Raise(nameof(StatusText));
+            _submitRequestId ??= Guid.NewGuid().ToString("D");
+            var submittedBody = keepBody ?? "";
+            var submittedPaths = keepFiles.Select(static item => item.SourcePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var saved = await Session.Database.Entries.SaveNoteAsync(
                 new SaveNoteRequest
                 {
-                    RequestId = Guid.NewGuid().ToString("D"),
-                    Body = keepBody ?? "",
+                    RequestId = _submitRequestId,
+                    Body = submittedBody,
                     WorkItemId = _draftWorkItemId,
                     HasAttachments = keepFiles.Count > 0
                 },
@@ -579,17 +583,38 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
                 TryDeleteStaging(pending.SourcePath);
             }
 
-            _body = "";
-            PendingFiles.Clear();
+            if (string.Equals(Body, submittedBody, StringComparison.Ordinal))
+            {
+                _body = "";
+            }
+
+            foreach (var pending in PendingFiles.Where(item => submittedPaths.Contains(item.SourcePath)).ToList())
+            {
+                PendingFiles.Remove(pending);
+            }
+
             RefreshVisiblePending();
-            Session.Database.Drafts.Clear(DraftId);
+            if (string.IsNullOrWhiteSpace(Body) && PendingFiles.Count == 0)
+            {
+                Session.Database.Drafts.Clear(DraftId);
+            }
+
+            _submitRequestId = null;
             _saveFailed = false;
             _saveSucceeded = true;
             _inputMode = CapsuleInputMode.SingleLine;
             var local = TimeZoneInfo.ConvertTime(saved.RecordedAtUtc, Session.Database.DisplayTimeZone.TimeZone);
             _successFlash = $"{local:HH:mm} 기록됨";
             StatusText = _successFlash;
-            Session.NotifyDataChanged();
+            try
+            {
+                Session.NotifyDataChanged();
+            }
+            catch (Exception)
+            {
+                StatusText = _successFlash + " · 목록 새로고침은 다음에";
+            }
+
             ClosePeek();
             if (!Session.BoardCollapsed)
             {

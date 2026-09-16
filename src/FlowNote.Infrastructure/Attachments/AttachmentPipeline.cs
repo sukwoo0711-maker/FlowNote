@@ -170,6 +170,21 @@ public sealed class AttachmentPipeline
         return Path.GetFullPath(Path.Combine(_paths.Root, relative));
     }
 
+    public void TryDeleteUnreferenced(PreparedAttachment prepared, IReadOnlySet<string> linkedIds)
+    {
+        if (linkedIds.Contains(prepared.Id))
+        {
+            return;
+        }
+
+        var relative = prepared.StoredRelativePath.Replace('/', Path.DirectorySeparatorChar);
+        var full = Path.GetFullPath(Path.Combine(_paths.Root, relative));
+        if (File.Exists(full))
+        {
+            File.Delete(full);
+        }
+    }
+
     private static string SafeExtension(string originalName)
     {
         var extension = Path.GetExtension(originalName);

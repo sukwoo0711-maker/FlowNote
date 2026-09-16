@@ -27,6 +27,7 @@ public partial class LiveDots : UserControl
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        IsVisibleChanged += OnIsVisibleChanged;
     }
 
     public double DotSize
@@ -57,9 +58,26 @@ public partial class LiveDots : UserControl
         }
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e) => Restart();
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (IsVisible)
+        {
+            Restart();
+        }
+    }
 
     private void OnUnloaded(object sender, RoutedEventArgs e) => StopLoop();
+
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible && IsLoaded)
+        {
+            Restart();
+            return;
+        }
+
+        StopLoop();
+    }
 
     private void Restart()
     {

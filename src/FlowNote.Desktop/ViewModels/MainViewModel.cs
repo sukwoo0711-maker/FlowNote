@@ -490,6 +490,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         var assignments = Session.Database.Assist.ListAssignments(entries.Select(static item => item.Id).ToList());
         var threadIds = assignments.Values.Where(static item => item.ThreadId is not null).Select(static item => item.ThreadId!);
         var threads = Session.Database.Assist.ListThreadsById(threadIds);
+        var dayJobs = Session.Database.Assist.LatestJobs(entries.Select(static item => item.Id).ToList());
         ReloadMinimap(entries, assignments, threads);
         ReloadPanorama(entries, assignments, threads);
         ReloadAssistSettings();
@@ -526,7 +527,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 }
 
                 assignments.TryGetValue(entry.Id, out var assignment);
-                var job = Session.Database.Assist.LatestJob(entry.Id);
+                dayJobs.TryGetValue(entry.Id, out var job);
                 ContextThread? thread = null;
                 if (assignment?.ThreadId is not null)
                 {
@@ -985,8 +986,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
             .Where(static item => item.IsExpanded)
             .Select(static item => item.Key)
             .ToHashSet(StringComparer.Ordinal);
-        var projection = DayFlowProjector.Project(entries, assignments, threads);
+        var mentionMap = Session.Database.Assist.ListMentionsForEntries(entries.Select(static item => item.Id).ToList());
+        var projection = DayFlowProjector.Project(entries, assignments, threads, mentionMap);
         var byId = entries.ToDictionary(static item => item.Id, StringComparer.Ordinal);
+        var attachmentCounts = Session.Database.Entries.CountAttachments(entries.Select(static item => item.Id).ToList());
+        var jobs = Session.Database.Assist.LatestJobs(entries.Select(static item => item.Id).ToList());
         var staged = new List<(DateTimeOffset Time, long Seq, PanoramaSegmentRow Row)>();
 
         foreach (var episode in projection.Episodes)
@@ -1004,7 +1008,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             var first = observed[0];
             var last = observed[^1];
-            var attachmentCount = observed.Sum(item => Session.Database.Entries.ListAttachments(item.Id).Count);
+            var attachmentCount = observed.Sum(item => attachmentCounts.GetValueOrDefault(item.Id));
             var completion = observed.Any(item =>
                 assignments.TryGetValue(item.Id, out var assignment)
                 && assignment.Role == ContextRole.CompletionMention);
@@ -1026,7 +1030,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 {
                     assignments.TryGetValue(item.Id, out var assignment);
                     threads.TryGetValue(assignment?.ThreadId ?? "", out var thread);
-                    return TimelineRow.From(item, Session, assignment, thread, Session.Database.Assist.LatestJob(item.Id));
+                    jobs.TryGetValue(item.Id, out var job);
+                    return TimelineRow.From(item, Session, assignment, thread, job);
                 }).ToList()
             }));
         }
@@ -1038,10 +1043,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 continue;
             }
 
-            var attachments = Session.Database.Entries.ListAttachments(entry.Id).Count;
+            var attachments = attachmentCounts.GetValueOrDefault(entry.Id);
             assignments.TryGetValue(entry.Id, out var assignment);
             threads.TryGetValue(request.ThreadId, out var thread);
-            var key = "request:" + request.EntryId;
+            jobs.TryGetValue(entry.Id, out var requestJob);
+            var key = "request:" + request.EntryId + ":" + request.ThreadId;
             staged.Add((entry.OccurredAtUtc, entry.Seq, new PanoramaSegmentRow
             {
                 Key = key,
@@ -1053,7 +1059,33 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 ThreadId = request.ThreadId,
                 AccentIndex = AccentFor(request.ThreadId),
                 IsExpanded = expanded.Contains(key),
-                Notes = [TimelineRow.From(entry, Session, assignment, thread, Session.Database.Assist.LatestJob(entry.Id))]
+                Notes = [TimelineRow.From(entry, Session, assignment, thread, requestJob)]
+            }));
+        }
+
+        foreach (var marker in projection.OfficialMarkers)
+        {
+            if (!byId.TryGetValue(marker.EntryId, out var entry))
+            {
+                continue;
+            }
+
+            var key = "official:" + marker.EntryId;
+            assignments.TryGetValue(entry.Id, out var assignment);
+            threads.TryGetValue(marker.ThreadId, out var thread);
+            jobs.TryGetValue(entry.Id, out var officialJob);
+            staged.Add((entry.OccurredAtUtc, entry.Seq, new PanoramaSegmentRow
+            {
+                Key = key,
+                Kind = PanoramaSegmentKind.Official,
+                Title = marker.Title,
+                TimeLabel = FormatObservedRange(entry.OccurredAtUtc, entry.OccurredAtUtc),
+                CountLabel = entry.TitleSnapshot ?? "",
+                StatusLabel = marker.Kind == EntryKind.TaskCompleted ? "공식 완료" : "공식 취소",
+                ThreadId = marker.ThreadId,
+                AccentIndex = string.IsNullOrEmpty(marker.ThreadId) ? 0 : AccentFor(marker.ThreadId),
+                IsExpanded = expanded.Contains(key),
+                Notes = [TimelineRow.From(entry, Session, assignment, thread, officialJob)]
             }));
         }
 
@@ -1081,25 +1113,24 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Notes = unclassified.Select(item =>
                 {
                     assignments.TryGetValue(item.Id, out var assignment);
-                    return TimelineRow.From(item, Session, assignment, null, Session.Database.Assist.LatestJob(item.Id));
+                    jobs.TryGetValue(item.Id, out var unclassifiedJob);
+                    return TimelineRow.From(item, Session, assignment, null, unclassifiedJob);
                 }).ToList()
             }));
         }
 
         PanoramaSegments.Clear();
-        PanoramaSegmentRow? previousEpisode = null;
-        foreach (var item in staged.OrderBy(static item => item.Time).ThenBy(static item => item.Seq))
+        var ordered = staged.OrderBy(static item => item.Time).ThenBy(static item => item.Seq).ToList();
+        var returns = DayFlowReadModel.MarkSameWorkReturns(
+            ordered.Select(static item => (item.Row.IsEpisode, item.Row.ThreadId)).ToList());
+        for (var i = 0; i < ordered.Count; i++)
         {
-            if (item.Row.IsEpisode && previousEpisode is not null && previousEpisode.ThreadId == item.Row.ThreadId)
+            if (ordered[i].Row.IsEpisode)
             {
-                item.Row.ShowsSameWorkReturn = true;
+                ordered[i].Row.ShowsSameWorkReturn = returns[i];
             }
 
-            PanoramaSegments.Add(item.Row);
-            if (item.Row.IsEpisode)
-            {
-                previousEpisode = item.Row;
-            }
+            PanoramaSegments.Add(ordered[i].Row);
         }
 
         PanoramaSummary = string.Join(
@@ -1133,7 +1164,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     private static int AccentFor(string threadId)
-        => Math.Abs(StringComparer.Ordinal.GetHashCode(threadId)) % 6;
+    {
+        unchecked
+        {
+            var hash = 23;
+            foreach (var ch in threadId)
+            {
+                hash = (hash * 31) + ch;
+            }
+
+            return (hash & 0x7FFFFFFF) % 6;
+        }
+    }
 
     private void ReloadAssistSettings()
     {
@@ -1390,7 +1432,7 @@ public sealed class TimelineRow
         var badge = AssistBadge(assignment, thread, job);
         var origin = assignment is null ? "규칙 미적용" : AssistCodec.OriginLabel(assignment.Origin);
         var quote = string.IsNullOrWhiteSpace(assignment?.SourceQuote) ? "" : " · \"" + assignment.SourceQuote + "\"";
-        var jobText = job is null ? "" : " · " + AssistCodec.JobStatus(job.Status);
+        var jobText = job is null ? "" : " · " + AssistCodec.JobStatusLabel(job.Status);
         return origin + " · " + badge + quote + jobText;
     }
 
@@ -1414,6 +1456,7 @@ public enum PanoramaSegmentKind
 {
     Episode,
     Request,
+    Official,
     Unclassified
 }
 
@@ -1446,6 +1489,8 @@ public sealed class PanoramaSegmentRow : INotifyPropertyChanged
     public bool IsEpisode => Kind == PanoramaSegmentKind.Episode;
 
     public bool IsRequest => Kind == PanoramaSegmentKind.Request;
+
+    public bool IsOfficial => Kind == PanoramaSegmentKind.Official;
 
     public bool IsUnclassified => Kind == PanoramaSegmentKind.Unclassified;
 

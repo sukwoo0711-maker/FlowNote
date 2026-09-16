@@ -1,5 +1,5 @@
 #define MyAppName "FlowNote"
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "sukwoo0711-maker"
 #define MyAppURL "https://github.com/sukwoo0711-maker/FlowNote"
 #define MyAppExeName "FlowNote.Desktop.exe"
@@ -19,7 +19,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\artifacts\dist
-OutputBaseFilename=FlowNote-0.4.0-win-x64-core-setup
+OutputBaseFilename=FlowNote-0.5.0-win-x64-core-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

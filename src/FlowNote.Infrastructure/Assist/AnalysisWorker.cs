@@ -11,6 +11,7 @@ public sealed class AnalysisWorker : IDisposable
     private readonly IContextInference _inference;
     private readonly IClock _clock;
     private readonly RulesEngine _rules = new();
+    private readonly ManualResetEventSlim _wake = new(false);
     private int _consecutiveFailures;
     private DateTimeOffset _circuitUntil = DateTimeOffset.MinValue;
     private bool _disposed;
@@ -20,9 +21,21 @@ public sealed class AnalysisWorker : IDisposable
         _database = database;
         _inference = inference;
         _clock = clock;
+        _database.Assist.JobQueued += Pulse;
     }
 
     public event Action? Completed;
+
+    public void Pulse()
+    {
+        try
+        {
+            _wake.Set();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
@@ -33,13 +46,43 @@ public sealed class AnalysisWorker : IDisposable
             {
                 try
                 {
-                    await Task.Delay(250, cancellationToken);
+                    await WaitForJobAsync(cancellationToken);
+                    _wake.Reset();
                 }
                 catch (OperationCanceledException)
                 {
                     break;
                 }
             }
+        }
+    }
+
+    private async Task WaitForJobAsync(CancellationToken cancellationToken)
+    {
+        if (_wake.IsSet)
+        {
+            return;
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wait = ThreadPool.RegisterWaitForSingleObject(
+            _wake.WaitHandle,
+            static (state, _) => ((TaskCompletionSource)state!).TrySetResult(),
+            tcs,
+            TimeSpan.FromSeconds(2),
+            executeOnlyOnce: true);
+        await using var cancel = cancellationToken.Register(static state => ((TaskCompletionSource)state!).TrySetCanceled(), tcs);
+        try
+        {
+            await tcs.Task.ConfigureAwait(false);
+        }
+        catch (TaskCanceledException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        finally
+        {
+            wait.Unregister(null);
         }
     }
 
@@ -134,7 +177,7 @@ public sealed class AnalysisWorker : IDisposable
         }
         catch (OperationCanceledException)
         {
-            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.RetryWait, "cancelled", null, _clock.UtcNow - started);
+            _database.Assist.FinishJob(job.Id, AnalysisJobStatus.Stale, "cancelled", null, _clock.UtcNow - started);
             throw;
         }
         catch (Exception)
@@ -185,6 +228,8 @@ public sealed class AnalysisWorker : IDisposable
     public void Dispose()
     {
         _disposed = true;
+        _database.Assist.JobQueued -= Pulse;
+        _wake.Dispose();
         if (_inference is IDisposable disposable)
         {
             disposable.Dispose();
@@ -234,6 +279,35 @@ public sealed class DelayedFakeInference : IContextInference
             Mentions = result.Mentions,
             ErrorCode = result.ErrorCode,
             IsFake = true
+        };
+    }
+}
+
+public sealed class GateInference : IContextInference
+{
+    public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public bool IsFake => true;
+
+    public bool IsAvailable => true;
+
+    public async Task<InferenceResult> InferAsync(InferenceRequest request, CancellationToken cancellationToken)
+    {
+        Started.TrySetResult();
+        using var linked = cancellationToken.Register(() => Release.TrySetCanceled(cancellationToken));
+        await Release.Task.ConfigureAwait(false);
+        return new InferenceResult
+        {
+            EntryId = request.EntryId,
+            Decision = AssistDecision.New,
+            IsFake = true,
+            Primary = new InferencePrimary
+            {
+                TopicQuote = AssistText.TopicQuote(request.NoteText) ?? "gate",
+                Role = ContextRole.Performed,
+                SourceQuote = AssistText.TopicQuote(request.NoteText) ?? request.NoteText
+            }
         };
     }
 }

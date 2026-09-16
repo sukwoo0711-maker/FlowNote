@@ -78,7 +78,7 @@ public sealed class AssistPersistenceTests
         var assignment = temp.Database.Assist.GetAssignment(unlocked.Id);
         Assert.NotNull(assignment);
         Assert.Equal(AssignmentResolution.Assigned, assignment!.Resolution);
-        Assert.Equal(ContextRole.Performed, assignment.Role);
+        Assert.Equal(ContextRole.Unknown, assignment.Role);
         Assert.Equal(AssignmentOrigin.Rule, assignment.Origin);
         var locked = temp.Database.Assist.GetAssignment(
             (await temp.Database.Entries.ListForLocalDateAsync(new DateOnly(2026, 9, 14)))
@@ -223,6 +223,181 @@ public sealed class AssistPersistenceTests
         var cleared = temp.Database.Assist.GetAssignment(entries["ab-3"].Id);
         Assert.True(cleared is { Resolution: AssignmentResolution.ManualClear, UserLocked: true });
         Assert.Null(cleared.ThreadId);
+    }
+
+    [Fact]
+    public async Task Relink_keeps_role_and_unlink_stays_unknown()
+    {
+        using var temp = new TempDatabase();
+        temp.Database.Assist.SetMode(AssistMode.RulesOnly);
+        var first = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = "role-keep",
+            Body = "인버터 과전류 확인 중"
+        });
+        using var worker = new AnalysisWorker(temp.Database, UnavailableContextInference.Instance, temp.Clock);
+        await worker.DrainAsync(4);
+        var original = temp.Database.Assist.GetAssignment(first.Id);
+        Assert.Equal(ContextRole.Performed, original?.Role);
+        var other = temp.Database.Assist.CreateThread("다른 묶음", first.Id, AssistText.EntryRevision(first), TitleOrigin.User);
+        temp.Database.Assist.CorrectAssignment(first.Id, "relink-1", other.Id, createNew: false, newTitle: null);
+        var relinked = temp.Database.Assist.GetAssignment(first.Id);
+        Assert.Equal(ContextRole.Performed, relinked?.Role);
+        Assert.Equal(other.Id, relinked?.ThreadId);
+        temp.Database.Assist.CorrectAssignment(first.Id, "clear-1", null, createNew: false, newTitle: null);
+        var cleared = temp.Database.Assist.GetAssignment(first.Id);
+        Assert.Equal(AssignmentResolution.ManualClear, cleared?.Resolution);
+        Assert.Equal(ContextRole.Unknown, cleared?.Role);
+        await worker.DrainAsync(4);
+        Assert.Equal(AssignmentResolution.ManualClear, temp.Database.Assist.GetAssignment(first.Id)?.Resolution);
+    }
+
+    [Fact]
+    public async Task Late_inference_after_edit_does_not_write()
+    {
+        using var temp = new TempDatabase();
+        temp.Database.Assist.SetMode(AssistMode.LocalAssist);
+        var saved = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = "race-edit",
+            Body = "확인"
+        });
+        var gate = new GateInference();
+        using var worker = new AnalysisWorker(temp.Database, gate, temp.Clock);
+        using var cts = new CancellationTokenSource();
+        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        worker.Completed += () => finished.TrySetResult();
+        var run = worker.RunAsync(cts.Token);
+        await gate.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await temp.Database.Entries.UpdateNoteAsync(new UpdateNoteRequest(saved.Id, "확인 후 수정한 원문"));
+        gate.Release.TrySetResult();
+        await finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cts.Cancel();
+        try
+        {
+            await run;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        var assignment = temp.Database.Assist.GetAssignment(saved.Id);
+        Assert.True(assignment is null || assignment.Origin != AssignmentOrigin.Model);
+        Assert.DoesNotContain(
+            temp.Database.Assist.ListJobs(saved.Id),
+            job => job.Status == AnalysisJobStatus.Succeeded && job.EntryRevision == AssistText.EntryRevision(saved));
+    }
+
+    [Fact]
+    public async Task Late_inference_after_delete_does_not_revive()
+    {
+        using var temp = new TempDatabase();
+        temp.Database.Assist.SetMode(AssistMode.LocalAssist);
+        var saved = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = "race-del",
+            Body = "확인"
+        });
+        var gate = new GateInference();
+        using var worker = new AnalysisWorker(temp.Database, gate, temp.Clock);
+        using var cts = new CancellationTokenSource();
+        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        worker.Completed += () => finished.TrySetResult();
+        var run = worker.RunAsync(cts.Token);
+        await gate.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await temp.Database.Entries.SoftDeleteNoteAsync(saved.Id);
+        gate.Release.TrySetResult();
+        await finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cts.Cancel();
+        try
+        {
+            await run;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        Assert.Null(temp.Database.Assist.GetAssignment(saved.Id)?.ThreadId);
+        Assert.DoesNotContain(temp.Database.Assist.ListJobs(saved.Id), static job => job.Status == AnalysisJobStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task Late_inference_after_correct_does_not_write()
+    {
+        using var temp = new TempDatabase();
+        temp.Database.Assist.SetMode(AssistMode.LocalAssist);
+        var saved = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = "race-corr",
+            Body = "확인"
+        });
+        var gate = new GateInference();
+        using var worker = new AnalysisWorker(temp.Database, gate, temp.Clock);
+        using var cts = new CancellationTokenSource();
+        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        worker.Completed += () => finished.TrySetResult();
+        var run = worker.RunAsync(cts.Token);
+        await gate.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var thread = temp.Database.Assist.CreateThread("사용자 묶음", saved.Id, AssistText.EntryRevision(saved), TitleOrigin.User);
+        temp.Database.Assist.CorrectAssignment(saved.Id, "race-lock", thread.Id, false, null);
+        gate.Release.TrySetResult();
+        await finished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cts.Cancel();
+        try
+        {
+            await run;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        var assignment = temp.Database.Assist.GetAssignment(saved.Id);
+        Assert.True(assignment is { UserLocked: true, ThreadId: not null });
+        Assert.Equal(thread.Id, assignment!.ThreadId);
+    }
+
+    [Fact]
+    public async Task Max_attempts_finish_as_failed()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 9, 14, 1, 24, 0, TimeSpan.Zero));
+        using var temp = new TempDatabase(clock);
+        temp.Database.Assist.SetMode(AssistMode.LocalAssist);
+        var saved = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = "max-try",
+            Body = "확인"
+        });
+        using var worker = new AnalysisWorker(
+            temp.Database,
+            new DelayedFakeInference(TimeSpan.Zero, request => new InferenceResult
+            {
+                EntryId = request.EntryId,
+                Decision = AssistDecision.Abstain,
+                ErrorCode = "model-unavailable-retry",
+                IsFake = true
+            }),
+            clock);
+        for (var i = 0; i < 5; i++)
+        {
+            clock.UtcNow = clock.UtcNow.AddMinutes(1);
+            await worker.ProcessOneAsync();
+        }
+
+        var job = Assert.Single(temp.Database.Assist.ListJobs(saved.Id));
+        Assert.Equal(AnalysisJobStatus.Failed, job.Status);
+        Assert.Equal("max-attempts", job.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Duplicate_request_id_does_not_duplicate_entry()
+    {
+        using var temp = new TempDatabase();
+        var first = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest { RequestId = "same-entry", Body = "한 번" });
+        var second = await temp.Database.Entries.SaveNoteAsync(new SaveNoteRequest { RequestId = "same-entry", Body = "두 번" });
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal("한 번", second.Body);
+        var day = await temp.Database.Entries.ListForLocalDateAsync(new DateOnly(2026, 9, 14));
+        Assert.Equal(1, day.Count(static item => item.RequestId == "same-entry"));
     }
 
     private static string FindRepoRoot()

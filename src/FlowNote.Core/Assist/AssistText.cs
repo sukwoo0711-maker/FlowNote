@@ -50,6 +50,89 @@ public static class AssistText
                     || text.Contains("부탁", StringComparison.Ordinal)));
     }
 
+    public static bool LooksPlan(string text)
+        => ContainsAny(text, "예정", "내일", "모레", "계획");
+
+    public static bool LooksRequest(string text)
+        => ContainsAny(text, "요청", "부탁") && !LooksDeferred(text);
+
+    public static bool LooksCompletionMention(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Contains("재현 안", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return ContainsAny(text, "완료했", "끝냈", "마쳤", "처리했");
+    }
+
+    public static bool LooksPerformed(string text)
+        => ContainsAny(text, "확인 중", "검토 시작", "검토 중", "재현", "점검 중", "처리 중", "하고 있");
+
+    public static bool LooksMixedPerformAndDefer(string text)
+        => LooksDeferred(text) && LooksPerformed(text);
+
+    public static IReadOnlyList<string> Clauses(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return text
+            .Split(['.', '。', '!', '?', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+    }
+
+    public static ContextRole ClassifyRole(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return ContextRole.Unknown;
+        }
+
+        if (LooksMixedPerformAndDefer(text))
+        {
+            return ContextRole.Performed;
+        }
+
+        if (LooksDeferred(text))
+        {
+            return ContextRole.RequestLater;
+        }
+
+        if (LooksPlan(text))
+        {
+            return ContextRole.Plan;
+        }
+
+        if (LooksCompletionMention(text))
+        {
+            return ContextRole.CompletionMention;
+        }
+
+        if (LooksRequest(text))
+        {
+            return ContextRole.RequestUnknown;
+        }
+
+        if (LooksPerformed(text))
+        {
+            return ContextRole.Performed;
+        }
+
+        return ContextRole.Unknown;
+    }
+
+    public static bool IsAutoAlias(string alias)
+        => string.IsNullOrWhiteSpace(alias)
+            || alias.Length < 3
+            || IsGenericTopic(alias)
+            || IsFollowUpToken(alias);
+
+    private static bool ContainsAny(string text, params string[] parts)
+        => parts.Any(part => text.Contains(part, StringComparison.Ordinal));
+
     public static IReadOnlyList<string> TopicTokens(string text)
     {
         if (string.IsNullOrWhiteSpace(text))

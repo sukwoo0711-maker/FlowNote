@@ -1,7 +1,7 @@
 # FlowNote 사용 안내
 
 기록일: 2026-09-16  
-대상 빌드: `artifacts/dist/FlowNote-0.4.0-win-x64-core.zip`  
+대상 빌드: `artifacts/dist/FlowNote-0.5.0-win-x64-core.zip`  
 제품 기준: `docs/CORE_PRODUCT.md`
 
 ## 실행
@@ -12,7 +12,7 @@
 powershell -ExecutionPolicy Bypass -File scripts/package-core.ps1
 ```
 
-- 포터블: `artifacts/dist/FlowNote-0.4.0-win-x64-core.zip`
+- 포터블: `artifacts/dist/FlowNote-0.5.0-win-x64-core.zip`
 - 폴더 실행: `artifacts/win-x64/FlowNote.Desktop.exe`
 
 - 일반 데이터: `%LOCALAPPDATA%\FlowNote\live`

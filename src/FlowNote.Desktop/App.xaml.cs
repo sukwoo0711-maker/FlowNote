@@ -30,6 +30,7 @@ public partial class App : System.Windows.Application
     private bool _smoke;
     private bool _trayHintShown;
     private AnalysisWorker? _worker;
+    private Task? _workerTask;
     private CancellationTokenSource? _assistCts;
     private FlowNote.Infrastructure.Assist.Embedded.EmbeddedEngineManager? _engine;
     private GlobalHotKey? _hotKey;
@@ -531,7 +532,7 @@ public partial class App : System.Windows.Application
             {
             }
         };
-        _ = _worker.RunAsync(_assistCts.Token);
+        _workerTask = _worker.RunAsync(_assistCts.Token);
     }
 
     private void StopAssistWorker()
@@ -544,8 +545,17 @@ public partial class App : System.Windows.Application
         {
         }
 
+        try
+        {
+            _workerTask?.Wait(TimeSpan.FromSeconds(3));
+        }
+        catch (AggregateException)
+        {
+        }
+
         _worker?.Dispose();
         _worker = null;
+        _workerTask = null;
         _engine?.Dispose();
         _engine = null;
         _assistCts?.Dispose();

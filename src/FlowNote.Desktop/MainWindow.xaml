@@ -367,7 +367,6 @@
                                                                    Text="같은 업무로 돌아옴"
                                                                    Visibility="{Binding ShowsSameWorkReturn, Converter={StaticResource BoolToVis}}"/>
                                                         <Border CornerRadius="14" Padding="0" BorderThickness="1"
-                                                                BorderBrush="{StaticResource HairlineBrush}"
                                                                 Background="{StaticResource GlassCardBrush}">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
@@ -403,6 +402,9 @@
                                                                                 <DataTrigger Binding="{Binding IsUnclassified}" Value="True">
                                                                                     <Setter Property="Background" Value="#8A8680"/>
                                                                                 </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding IsOfficial}" Value="True">
+                                                                                    <Setter Property="Background" Value="#4A6A4A"/>
+                                                                                </DataTrigger>
                                                                             </Style.Triggers>
                                                                         </Style>
                                                                     </Border.Style>
@@ -412,6 +414,7 @@
                                                                             CommandParameter="{Binding}"
                                                                             Background="Transparent"
                                                                             BorderThickness="0"
+                                                                            Foreground="{StaticResource TextPrimaryBrush}"
                                                                             HorizontalContentAlignment="Stretch"
                                                                             Cursor="Hand"
                                                                             AutomationProperties.Name="구간 펼치기">
@@ -447,6 +450,7 @@
                                                                                         CommandParameter="{Binding}"
                                                                                         Background="Transparent"
                                                                                         BorderThickness="0"
+                                                                                        Foreground="{StaticResource TextPrimaryBrush}"
                                                                                         HorizontalContentAlignment="Stretch"
                                                                                         Cursor="Hand"
                                                                                         AutomationProperties.Name="원문 열기">

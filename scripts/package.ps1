@@ -4,7 +4,7 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$version = "0.4.0"
+$version = "0.5.0"
 $publishDir = Join-Path $root "artifacts\win-x64"
 $stageDir = Join-Path $root "artifacts\package\app"
 $distDir = Join-Path $root "artifacts\dist"

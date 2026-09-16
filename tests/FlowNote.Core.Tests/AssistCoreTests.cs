@@ -8,12 +8,12 @@ public sealed class RulesEngineTests
     private readonly RulesEngine _engine = new();
 
     [Fact]
-    public void Unique_issue_key_links_as_performed()
+    public void Unique_issue_key_links_without_assuming_performed()
     {
         var result = _engine.Decide(Request("DEV-42 로그 확인", [Candidate("t1", "DEV-42")]), false, false);
         Assert.Equal(AssistDecision.Link, result.Decision);
         Assert.Equal("t1", result.Primary?.ThreadId);
-        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
         Assert.Equal("DEV-42", result.Primary?.SourceQuote);
     }
 
@@ -42,7 +42,7 @@ public sealed class RulesEngineTests
             false);
         Assert.Equal(AssistDecision.Link, result.Decision);
         Assert.Equal("t-alias", result.Primary?.ThreadId);
-        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public sealed class RulesEngineTests
             false);
         Assert.Equal(AssistDecision.Link, result.Decision);
         Assert.Equal("t-a", result.Primary?.ThreadId);
-        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class RulesEngineTests
             false);
         Assert.Equal(AssistDecision.Link, result.Decision);
         Assert.Equal("t-a", result.Primary?.ThreadId);
-        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
     }
 
     [Fact]
@@ -157,6 +157,51 @@ public sealed class RulesEngineTests
             false,
             false);
         Assert.Equal(AssistDecision.Abstain, result.Decision);
+    }
+
+    [Fact]
+    public void Plan_is_not_performed()
+    {
+        var result = _engine.Decide(Request("내일 보드 전원 점검 예정", []), false, false);
+        Assert.Equal(AssistDecision.New, result.Decision);
+        Assert.Equal(ContextRole.Plan, result.Primary?.Role);
+    }
+
+    [Fact]
+    public void Request_without_later_is_not_performed()
+    {
+        var result = _engine.Decide(Request("코스표 검토 요청 들어옴", []), false, false);
+        Assert.Equal(AssistDecision.New, result.Decision);
+        Assert.Equal(ContextRole.RequestLater, result.Primary?.Role);
+        Assert.NotEqual(ContextRole.Performed, result.Primary?.Role);
+    }
+
+    [Fact]
+    public void Mixed_perform_and_defer_keeps_secondary_mention()
+    {
+        var result = _engine.Decide(
+            Request(
+                "인버터 확인 중. 코스표는 나중에 보기",
+                [
+                    new ThreadCandidate { ThreadId = "t-a", Title = "인버터 과전류", Aliases = ["인버터"] },
+                    new ThreadCandidate { ThreadId = "t-b", Title = "코스표 검토", Aliases = ["코스표"] }
+                ]),
+            false,
+            false);
+        Assert.Equal(AssistDecision.Link, result.Decision);
+        Assert.Equal("t-a", result.Primary?.ThreadId);
+        Assert.Equal(ContextRole.Performed, result.Primary?.Role);
+        var mention = Assert.Single(result.Mentions);
+        Assert.Equal("t-b", mention.ThreadId);
+        Assert.Equal(ContextRole.RequestLater, mention.Role);
+    }
+
+    [Fact]
+    public void Lack_of_later_does_not_confirm_perform()
+    {
+        var result = _engine.Decide(Request("DEV-42 관련 로그", [Candidate("t1", "DEV-42")]), false, false);
+        Assert.Equal(AssistDecision.Link, result.Decision);
+        Assert.Equal(ContextRole.Unknown, result.Primary?.Role);
     }
 
     private static InferenceRequest Request(string note, IReadOnlyList<ThreadCandidate> candidates, string? continuation = null)
@@ -341,7 +386,7 @@ public sealed class DayFlowProjectorTests
     }
 
     [Fact]
-    public void Unknown_is_not_assigned_to_either_episode()
+    public void Assigned_unknown_stays_in_the_same_thread_episode()
     {
         var entries = Notes(("a", 9, 0), ("u", 9, 10), ("a2", 9, 20));
         var threads = Threads(("t-a", "A"));
@@ -350,8 +395,88 @@ public sealed class DayFlowProjectorTests
             ("u", "t-a", ContextRole.Unknown),
             ("a2", "t-a", ContextRole.Performed));
         var projection = DayFlowProjector.Project(entries, assignments, threads);
-        Assert.Contains("u", projection.UnclassifiedEntryIds);
-        Assert.Equal(["a", "a2"], projection.Episodes[0].ObservedEntryIds);
+        Assert.DoesNotContain("u", projection.UnclassifiedEntryIds);
+        Assert.Equal(["a", "u", "a2"], projection.Episodes[0].ObservedEntryIds);
+    }
+
+    [Fact]
+    public void Official_complete_is_kept_separate_from_observation()
+    {
+        var notes = Notes(("a", 9, 0));
+        var complete = new TimelineEntry
+        {
+            Seq = 2,
+            Id = "done",
+            RequestId = "done",
+            Kind = EntryKind.TaskCompleted,
+            Body = "",
+            TitleSnapshot = "공식 완료",
+            RecordedAtUtc = new DateTimeOffset(2026, 9, 15, 1, 30, 0, TimeSpan.Zero),
+            OccurredAtUtc = new DateTimeOffset(2026, 9, 15, 1, 30, 0, TimeSpan.Zero),
+            OccurredTimeSource = OccurredTimeSource.User,
+            RecordedOffsetMinutes = 540,
+            WorkItemId = "w1"
+        };
+        var threads = new Dictionary<string, ContextThread>(StringComparer.Ordinal)
+        {
+            ["t-a"] = new ContextThread
+            {
+                Id = "t-a",
+                Title = "A",
+                TitleOrigin = TitleOrigin.Derived,
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                Version = 1,
+                WorkItemId = "w1"
+            }
+        };
+        var assignments = Assign(("a", "t-a", ContextRole.Performed));
+        var projection = DayFlowProjector.Project([notes[0], complete], assignments, threads);
+        Assert.Equal(["a"], projection.Episodes[0].ObservedEntryIds);
+        Assert.Equal("done", Assert.Single(projection.OfficialMarkers).EntryId);
+        Assert.Equal("공식 완료", projection.OfficialMarkers[0].Title);
+    }
+
+    [Fact]
+    public void Secondary_mention_does_not_double_count_original()
+    {
+        var entries = Notes(("mix", 9, 0));
+        var threads = Threads(("t-a", "A"), ("t-b", "B"));
+        var assignments = Assign(("mix", "t-a", ContextRole.Performed));
+        var mentions = new Dictionary<string, IReadOnlyList<ContextMention>>(StringComparer.Ordinal)
+        {
+            ["mix"] =
+            [
+                new ContextMention
+                {
+                    Id = "m1",
+                    EntryId = "mix",
+                    ThreadId = "t-b",
+                    Role = ContextRole.RequestLater,
+                    SourceQuote = "코스표",
+                    SourceRevision = "r",
+                    Origin = AssignmentOrigin.Rule
+                }
+            ]
+        };
+        var projection = DayFlowProjector.Project(entries, assignments, threads, mentions);
+        Assert.Equal(["mix"], projection.Episodes[0].ObservedEntryIds);
+        Assert.Equal("mix", Assert.Single(projection.RequestMarkers).EntryId);
+        Assert.Equal("t-b", projection.RequestMarkers[0].ThreadId);
+    }
+
+    [Fact]
+    public void Return_mark_requires_intervening_other_work()
+    {
+        var marks = DayFlowReadModel.MarkSameWorkReturns(
+        [
+            (true, "a"),
+            (false, "b"),
+            (true, "a"),
+            (true, "a")
+        ]);
+        Assert.False(marks[0]);
+        Assert.True(marks[2]);
+        Assert.False(marks[3]);
     }
 
     private static IReadOnlyList<TimelineEntry> Notes(params (string Id, int Hour, int Minute)[] items)

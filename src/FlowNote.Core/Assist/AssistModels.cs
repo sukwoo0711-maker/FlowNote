@@ -1,3 +1,5 @@
+using FlowNote.Core.Models;
+
 namespace FlowNote.Core.Assist;
 
 public sealed class ContextThread
@@ -141,10 +143,19 @@ public sealed class DayFlowRequestMarker
     public required ContextRole Role { get; init; }
 }
 
+public sealed class DayFlowOfficialMarker
+{
+    public required string EntryId { get; init; }
+    public required string ThreadId { get; init; }
+    public required string Title { get; init; }
+    public required EntryKind Kind { get; init; }
+}
+
 public sealed class DayFlowProjection
 {
     public required IReadOnlyList<DayFlowEpisode> Episodes { get; init; }
     public required IReadOnlyList<DayFlowRequestMarker> RequestMarkers { get; init; }
+    public IReadOnlyList<DayFlowOfficialMarker> OfficialMarkers { get; init; } = [];
     public required IReadOnlyList<string> UnclassifiedEntryIds { get; init; }
     public string Legend { get; init; } = "기록 기반 연결 · 실작업시간 아님";
 }

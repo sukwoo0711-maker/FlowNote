@@ -151,6 +151,19 @@ public static class AssistCodec
         _ => "미분류"
     };
 
+    public static string JobStatusLabel(AnalysisJobStatus status) => status switch
+    {
+        AnalysisJobStatus.Pending => "대기",
+        AnalysisJobStatus.Running => "분석 중",
+        AnalysisJobStatus.Succeeded => "분석됨",
+        AnalysisJobStatus.Abstained => "보류",
+        AnalysisJobStatus.RetryWait => "다시 시도 대기",
+        AnalysisJobStatus.Blocked => "중단",
+        AnalysisJobStatus.Stale => "만료",
+        AnalysisJobStatus.Failed => "실패",
+        _ => "대기"
+    };
+
     public static string OriginLabel(AssignmentOrigin origin) => origin switch
     {
         AssignmentOrigin.User => "사용자",

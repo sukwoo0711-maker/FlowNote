@@ -47,6 +47,12 @@ public sealed class SqliteEntryService : IEntryService
         var hasFiles = files.Count > 0;
         NoteRules.ValidateSave(request.Body, request.HasAttachments || hasFiles);
 
+        var existing = _executor.Read(connection => FindByRequestId(connection, null, request.RequestId));
+        if (existing is not null)
+        {
+            return Task.FromResult(existing);
+        }
+
         var prepared = new List<PreparedAttachment>(files.Count);
         for (var i = 0; i < files.Count; i++)
         {
@@ -72,10 +78,10 @@ public sealed class SqliteEntryService : IEntryService
 
         var saved = _executor.Write((connection, transaction) =>
         {
-            var existing = FindByRequestId(connection, transaction, toSave.RequestId);
-            if (existing is not null)
+            var existingInTx = FindByRequestId(connection, transaction, toSave.RequestId);
+            if (existingInTx is not null)
             {
-                return existing;
+                return existingInTx;
             }
 
             var entry = SaveNote(connection, transaction, toSave);
@@ -87,12 +93,52 @@ public sealed class SqliteEntryService : IEntryService
             _assist.OnNoteSaved(connection, transaction, entry);
             return entry;
         });
+
+        if (prepared.Count > 0)
+        {
+            DiscardUnreferenced(prepared, saved.Id);
+        }
+
         return Task.FromResult(saved);
     }
 
     public IReadOnlyList<StoredAttachment> ListAttachments(string entryId)
     {
         return _executor.Read(connection => _attachments.ListForEntry(connection, entryId));
+    }
+
+    public IReadOnlyDictionary<string, int> CountAttachments(IReadOnlyList<string> entryIds)
+    {
+        if (entryIds.Count == 0)
+        {
+            return new Dictionary<string, int>(StringComparer.Ordinal);
+        }
+
+        return _executor.Read(connection =>
+        {
+            using var command = connection.CreateCommand();
+            var names = new List<string>(entryIds.Count);
+            for (var i = 0; i < entryIds.Count; i++)
+            {
+                var name = "$e" + i;
+                names.Add(name);
+                command.Parameters.AddWithValue(name, entryIds[i]);
+            }
+
+            command.CommandText = $"""
+                SELECT entry_id, COUNT(*) FROM entry_attachments
+                WHERE entry_id IN ({string.Join(",", names)})
+                GROUP BY entry_id;
+                """;
+            using var reader = command.ExecuteReader();
+            var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+            while (reader.Read())
+            {
+                counts[reader.GetString(0)] = reader.GetInt32(1);
+            }
+
+            return (IReadOnlyDictionary<string, int>)counts;
+        });
     }
 
     public IReadOnlyList<TimelineEntry> Search(string query)
@@ -336,6 +382,17 @@ public sealed class SqliteEntryService : IEntryService
             command.Parameters.AddWithValue("$end", UtcInstant.ToStorage(exclusiveEndUtc));
             return ReadAll(command);
         });
+    }
+
+    private void DiscardUnreferenced(IReadOnlyList<PreparedAttachment> prepared, string entryId)
+    {
+        var linked = new HashSet<string>(
+            ListAttachments(entryId).Select(static item => item.Id),
+            StringComparer.Ordinal);
+        foreach (var item in prepared)
+        {
+            _attachments.TryDeleteUnreferenced(item, linked);
+        }
     }
 
     internal TimelineEntry SaveNote(SqliteConnection connection, SqliteTransaction transaction, SaveNoteRequest request)
