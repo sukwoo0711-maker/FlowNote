@@ -43,6 +43,8 @@ public partial class FloatingAuxiliaryPanel : UserControl
         };
     }
 
+    public TextBox LongMemoBox => LongMemo;
+
     private FloatingViewModel? Vm => DataContext as FloatingViewModel;
 
     private void OnRecentOpen(object sender, RoutedEventArgs e)

@@ -1030,8 +1030,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IReadOnlyDictionary<string, EntryContextAssignment> assignments,
         IReadOnlyDictionary<string, ContextThread> threads)
     {
-        var expanded = PanoramaSegments
-            .Where(static item => item.IsExpanded)
+        var collapsed = PanoramaSegments
+            .Where(static item => !item.IsExpanded)
             .Select(static item => item.Key)
             .ToHashSet(StringComparer.Ordinal);
         var mentionMap = Session.Database.Assist.ListMentionsForEntries(entries.Select(static item => item.Id).ToList());
@@ -1073,7 +1073,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 ThreadId = episode.ThreadId,
                 AccentIndex = AccentFor(episode.ThreadId),
                 HasObservationGap = episode.HasObservationGap,
-                IsExpanded = expanded.Contains("episode:" + episode.ThreadId + ":" + first.Id),
+                IsExpanded = !collapsed.Contains("episode:" + episode.ThreadId + ":" + first.Id),
                 Notes = observed.Select(item =>
                 {
                     assignments.TryGetValue(item.Id, out var assignment);
@@ -1106,7 +1106,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 StatusLabel = AssistCodec.RoleLabel(request.Role),
                 ThreadId = request.ThreadId,
                 AccentIndex = AccentFor(request.ThreadId),
-                IsExpanded = expanded.Contains(key),
+                IsExpanded = !collapsed.Contains(key),
                 Notes = [TimelineRow.From(entry, Session, assignment, thread, requestJob)]
             }));
         }
@@ -1132,7 +1132,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 StatusLabel = marker.Title,
                 ThreadId = marker.ThreadId,
                 AccentIndex = string.IsNullOrEmpty(marker.ThreadId) ? 0 : AccentFor(marker.ThreadId),
-                IsExpanded = expanded.Contains(key),
+                IsExpanded = !collapsed.Contains(key),
                 Notes = [TimelineRow.From(entry, Session, assignment, thread, officialJob)]
             }));
         }
@@ -1157,7 +1157,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 StatusLabel = "단서 부족",
                 ThreadId = "",
                 AccentIndex = 0,
-                IsExpanded = expanded.Contains(key),
+                IsExpanded = !collapsed.Contains(key),
                 Notes = unclassified.Select(item =>
                 {
                     assignments.TryGetValue(item.Id, out var assignment);
@@ -1244,11 +1244,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Raise(nameof(AssistModelText));
     }
 
-    public void SetCaptureHotkeyStatus(bool registered)
+    public void SetCaptureHotkeyStatus(bool registered, string? label = null, int error = 0)
     {
-        CaptureHotkeyText = registered
-            ? "기록 창 단축키는 Ctrl+Alt+Space입니다. 다른 앱을 쓰다가도 바로 한 줄 입력칸으로 옵니다."
-            : "Ctrl+Alt+Space는 다른 앱이 쓰고 있어 등록하지 못했습니다. 트레이의 기록 창으로 열 수 있습니다.";
+        label ??= "Ctrl+Alt+Space";
+        CaptureHotkeyText = !registered
+            ? $"단축키를 등록하지 못했습니다 (Windows {error}). 트레이의 기록 창을 사용하세요."
+            : label == "Ctrl+Alt+Space"
+                ? $"퀵 메모: {label} · 다른 앱에서 바로 입력으로 이동합니다."
+                : $"기본 키를 다른 앱이 사용 중입니다. 현재 퀵 메모: {label}. 이전 FlowNote를 종료한 뒤 다시 실행하면 기본 키를 시도합니다.";
         Raise(nameof(CaptureHotkeyText));
     }
 
@@ -1348,6 +1351,9 @@ public sealed class TimelineRow
     public bool ShowAssistBadge => !string.IsNullOrWhiteSpace(AssistBadgeText);
 
     public string AssistDetailText { get; init; } = "";
+
+    public string StickyText => NoteDisplayRules.StickyText(FullBody, Title, AttachmentPreviews.Count > 0);
+    public bool HasStickyText => !string.IsNullOrWhiteSpace(StickyText);
 
     public string ExpandedText => string.IsNullOrWhiteSpace(FullBody) ? Title : FullBody;
 

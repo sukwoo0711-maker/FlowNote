@@ -243,7 +243,7 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
 
     public bool ShowPeek => _peekRow is not null;
 
-    public string PeekTitle => _peekRow?.Title ?? "";
+    public string PeekTitle => _peekRow?.TimeLabel ?? "";
 
     public string PeekBody => _peekRow?.Body ?? "";
 
@@ -489,6 +489,7 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         Raise(nameof(IsMultiline));
         Raise(nameof(CapsuleInputReadOnly));
         SetPanel(CapsulePanelKind.Draft);
+        FocusInputRequested?.Invoke();
     }
 
     public void NotifyPossibleMultilinePaste()

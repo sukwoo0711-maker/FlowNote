@@ -1,6 +1,6 @@
 #define MyAppName "FlowNote"
 #ifndef MyAppVersion
-#define MyAppVersion "0.5.3"
+#define MyAppVersion "0.5.4"
 #endif
 #define MyAppPublisher "sukwoo0711-maker"
 #define MyAppURL "https://github.com/sukwoo0711-maker/FlowNote"

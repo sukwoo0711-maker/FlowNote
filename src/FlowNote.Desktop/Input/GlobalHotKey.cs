@@ -5,7 +5,7 @@ namespace FlowNote.Desktop.Input;
 
 internal sealed class GlobalHotKey : IDisposable
 {
-    public const int CaptureId = 0x464E01;
+    public const int CaptureId = 0x464E;
 
     private HwndSource? _source;
     private readonly Action _onCapture;
@@ -23,14 +23,23 @@ internal sealed class GlobalHotKey : IDisposable
         };
         _source = new HwndSource(parameters);
         _source.AddHook(Hook);
-        CaptureRegistered = Native.RegisterHotKey(
-            _source.Handle,
-            CaptureId,
-            Native.ModControl | Native.ModAlt | Native.ModNoRepeat,
-            Native.VkSpace);
+        CaptureRegistered = Native.RegisterHotKey(_source.Handle, CaptureId,
+            Native.ModControl | Native.ModAlt | Native.ModNoRepeat, Native.VkSpace);
+        if (!CaptureRegistered)
+        {
+            PrimaryError = Marshal.GetLastWin32Error();
+            CaptureRegistered = Native.RegisterHotKey(_source.Handle, CaptureId,
+                Native.ModControl | Native.ModAlt | Native.ModNoRepeat, 0x4E);
+            if (CaptureRegistered) ActiveLabel = "Ctrl+Alt+N";
+            else RegistrationError = Marshal.GetLastWin32Error();
+        }
     }
 
     public bool CaptureRegistered { get; }
+    public string ActiveLabel { get; } = CaptureLabel;
+    public int PrimaryError { get; }
+    public int RegistrationError { get; }
+    public bool UsesFallback => CaptureRegistered && ActiveLabel != CaptureLabel;
 
     public static string CaptureLabel => "Ctrl+Alt+Space";
 
@@ -41,7 +50,7 @@ internal sealed class GlobalHotKey : IDisposable
             return;
         }
 
-        Native.UnregisterHotKey(_source.Handle, CaptureId);
+        if (CaptureRegistered) Native.UnregisterHotKey(_source.Handle, CaptureId);
         _source.RemoveHook(Hook);
         _source.Dispose();
         _source = null;

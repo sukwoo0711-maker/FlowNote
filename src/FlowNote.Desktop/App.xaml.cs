@@ -304,7 +304,6 @@ public partial class App : System.Windows.Application
             _main.Hide();
             ShowTrayBalloonOnce();
         };
-        SetupTray();
         if (args.Demo || _smoke)
         {
             _main.Show();
@@ -313,7 +312,12 @@ public partial class App : System.Windows.Application
         if (!_smoke)
         {
             _hotKey = new GlobalHotKey(() => _floating?.FocusMemoFromUser());
-            mainVm.SetCaptureHotkeyStatus(_hotKey.CaptureRegistered);
+            mainVm.SetCaptureHotkeyStatus(_hotKey.CaptureRegistered, _hotKey.ActiveLabel, _hotKey.RegistrationError);
+        }
+        SetupTray();
+        if (_hotKey is { UsesFallback: true } && _tray is not null)
+        {
+            _tray.ShowBalloonTip(5000, "FlowNote 단축키", "기본 키가 사용 중입니다. " + _hotKey.ActiveLabel + "로 퀵 메모를 여세요.", Forms.ToolTipIcon.Info);
         }
         if (args.AssistSmoke)
         {
@@ -389,11 +393,11 @@ public partial class App : System.Windows.Application
         _tray = new Forms.NotifyIcon
         {
             Visible = true,
-            Text = "FlowNote · " + GlobalHotKey.CaptureLabel,
+            Text = "FlowNote · " + (_hotKey?.ActiveLabel ?? GlobalHotKey.CaptureLabel),
             Icon = BrandIcon.LoadTrayIcon()
         };
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("기록 창 (" + GlobalHotKey.CaptureLabel + ")", null, (_, _) =>
+        menu.Items.Add("기록 창 (" + (_hotKey?.ActiveLabel ?? GlobalHotKey.CaptureLabel) + ")", null, (_, _) =>
         {
             _floating?.FocusMemoFromUser();
         });

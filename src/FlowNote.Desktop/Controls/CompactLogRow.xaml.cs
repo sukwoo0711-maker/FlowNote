@@ -55,6 +55,7 @@ public partial class CompactLogRow : UserControl
             FileLabel.Visibility = Visibility.Collapsed;
         }
 
+        ImagePreview.SetPath(Thumb, row.ImagePath);
         var image = CapsuleImageLoader.TryLoad(row.ImagePath, 48);
         if (image is null)
         {

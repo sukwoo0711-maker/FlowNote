@@ -37,6 +37,7 @@ public partial class CompactAttachmentRow : UserControl
             return;
         }
 
+        ImagePreview.SetPath(Thumb, AttachmentRules.IsImage(pending.MediaType) ? pending.SourcePath : null);
         NameText.Text = pending.OriginalName;
         var size = pending.ByteSize > 0 ? pending.ByteSize : FileLength(pending.SourcePath);
         MetaText.Text = FileSizeDisplay.Format(size);

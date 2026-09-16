@@ -256,6 +256,9 @@
                                     <Button DockPanel.Dock="Right" VerticalAlignment="Top" Height="36" Content="하루 정리"
                                             Command="{Binding OpenDayReportCommand}"
                                             MinWidth="96" AutomationProperties.Name="하루 정리"/>
+                                    <Button DockPanel.Dock="Right" Margin="0,0,8,0" VerticalAlignment="Top"
+                                            Content="+ 메모" Command="{Binding FirstRecordCommand}"
+                                            Style="{StaticResource SecondaryButton}" AutomationProperties.Name="새 포스트잇 쓰기"/>
                                     <StackPanel Margin="0,0,16,0">
                                         <TextBlock FontSize="12" FontWeight="SemiBold"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
@@ -423,7 +426,7 @@
                                                                                 <TextBlock DockPanel.Dock="Right" FontSize="12"
                                                                                            Foreground="{StaticResource TextSecondaryBrush}"
                                                                                            Text="{Binding TimeLabel}"/>
-                                                                                <TextBlock FontWeight="SemiBold" Text="{Binding Title}" TextWrapping="Wrap"/>
+                                                                                <TextBlock FontWeight="SemiBold" Text="{Binding Title}" FontSize="12" TextWrapping="Wrap"/>
                                                                             </DockPanel>
                                                                             <TextBlock Margin="0,4,0,0" FontSize="12"
                                                                                        Foreground="{StaticResource TextSecondaryBrush}"
@@ -443,25 +446,22 @@
                                                                                Visibility="{Binding HasObservationGap, Converter={StaticResource BoolToVis}}"/>
                                                                     <ItemsControl ItemsSource="{Binding Notes}"
                                                                                   Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+                                                                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate>
-                                                                                <Button Margin="0,8,0,0"
-                                                                                        Command="{Binding DataContext.OpenPanoramaNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                                        CommandParameter="{Binding}"
-                                                                                        Background="Transparent"
-                                                                                        BorderThickness="0"
-                                                                                        Foreground="{StaticResource TextPrimaryBrush}"
-                                                                                        HorizontalContentAlignment="Stretch"
-                                                                                        Cursor="Hand"
-                                                                                        AutomationProperties.Name="원문 열기">
-                                                                                    <DockPanel>
-                                                                                        <TextBlock DockPanel.Dock="Left" Margin="0,0,8,0" Text="●"/>
-                                                                                        <TextBlock DockPanel.Dock="Right" FontSize="12"
-                                                                                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                                                                                   Text="{Binding TimeLabel}"/>
-                                                                                        <TextBlock Text="{Binding ExpandedText}" TextWrapping="Wrap"/>
-                                                                                    </DockPanel>
-                                                                                </Button>
+                                                                                <Border Margin="0,10,12,4" Padding="16" CornerRadius="3" Width="300"
+                                                                                        Background="#FFF9E8" BorderBrush="#E6DDC6" BorderThickness="1">
+                                                                                    <StackPanel>
+                                                                                        <DockPanel Margin="0,0,0,10">
+                                                                                            <TextBlock DockPanel.Dock="Left" Text="{Binding TimeLabel}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                                                            <Button Content="원문 보기" Style="{StaticResource GhostButton}" HorizontalAlignment="Right"
+                                                                                                    MinHeight="24" Padding="6,0" FontSize="11"
+                                                                                                    Command="{Binding DataContext.OpenPanoramaNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                                    CommandParameter="{Binding}" AutomationProperties.Name="원문 열기"/>
+                                                                                        </DockPanel>
+                                                                                        <controls:StickyNoteContent/>
+                                                                                    </StackPanel>
+                                                                                </Border>
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>

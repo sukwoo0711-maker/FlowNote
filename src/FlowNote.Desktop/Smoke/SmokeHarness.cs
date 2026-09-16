@@ -15,7 +15,7 @@ using FlowNote.Desktop.Views;
 
 namespace FlowNote.Desktop.Smoke;
 
-internal sealed class SmokeHarness
+internal sealed partial class SmokeHarness
 {
     private readonly AppSession _session;
     private readonly MainViewModel _mainVm;
@@ -420,6 +420,7 @@ internal sealed class SmokeHarness
 
         await VerifySearchNavigationAsync();
         await VerifyPostEditRefreshAsync();
+        await VerifyQuickNoteAsync();
         var resultPath = Path.Combine(_outputDir, "smoke-result.txt");
         if (_failed.Count > 0)
         {
@@ -729,9 +730,15 @@ internal sealed class SmokeHarness
 
     private static void WritePreviewPng(string path)
     {
-        using var bitmap = new System.Drawing.Bitmap(64, 40);
+        using var bitmap = new System.Drawing.Bitmap(1280, 720);
         using var graphics = System.Drawing.Graphics.FromImage(bitmap);
-        graphics.Clear(System.Drawing.Color.FromArgb(255, 29, 122, 80));
+        graphics.Clear(System.Drawing.Color.FromArgb(240, 244, 247));
+        using var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(29, 122, 80), 5);
+        using var font = new System.Drawing.Font("Segoe UI", 28);
+        graphics.DrawString("FlowNote image preview - synthetic test", font, System.Drawing.Brushes.Black, 40, 30);
+        for (var i = 0; i < 8; i++)
+            graphics.DrawRectangle(pen, 50 + i * 145, 200 + (i % 2) * 80, 120, 240);
+        graphics.DrawString("1280 x 720 / click to inspect", font, System.Drawing.Brushes.Black, 40, 620);
         bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }
 

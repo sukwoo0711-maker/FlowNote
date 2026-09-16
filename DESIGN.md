@@ -14,3 +14,11 @@ This maintenance release keeps the existing layout and visual identity.
 - State text is never editable note content.
 - Preserve keyboard focus indicators, IME handling, and existing note data.
 - Generated images are not evidence of runtime rendering.
+
+## 0.5.4 quick-note update
+- Notes are one body, not title plus excerpt. Preserve newlines and original storage.
+- Sticky paper surface #FFF9E8, edge #E6DDC6, corner 3 DIP; use existing ink.
+- Panorama keeps automatic work grouping and request markers; group labels are small context, not editable note titles.
+- Existing records open as visible note bodies by default. Explicit collapse remains respected during refresh.
+- Image click or keyboard Enter opens an in-app zoom view. No external app or upload.
+- Explicit quick-note shortcut focuses the visible single-line/multiline editor and preserves the draft.

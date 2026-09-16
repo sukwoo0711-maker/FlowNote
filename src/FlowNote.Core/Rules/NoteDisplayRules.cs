@@ -2,6 +2,9 @@ namespace FlowNote.Core.Rules;
 
 public static class NoteDisplayRules
 {
+    public static string StickyText(string? body, string? legacyTitle, bool hasAttachments)
+        => !string.IsNullOrWhiteSpace(body) ? body : hasAttachments ? "" : legacyTitle ?? "";
+
     public static string DisplayPreview(string title, string preview)
     {
         if (string.IsNullOrWhiteSpace(preview))

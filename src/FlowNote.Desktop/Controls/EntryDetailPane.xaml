@@ -1,6 +1,7 @@
 <UserControl x:Class="FlowNote.Desktop.Controls.EntryDetailPane"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:FlowNote.Desktop.Controls"
              AutomationProperties.Name="기록 상세">
     <DockPanel>
         <Button DockPanel.Dock="Top"
@@ -11,11 +12,11 @@
                 AutomationProperties.Name="상세 닫기"/>
         <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding DetailTitle}" TextWrapping="Wrap"/>
+                <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Text="{Binding DetailTitle}" TextWrapping="Wrap"/>
                 <TextBlock Margin="0,8,0,0" Foreground="{StaticResource TextSecondaryBrush}" Text="{Binding DetailTimes}" TextWrapping="Wrap"/>
-                <TextBlock Margin="0,16,0,0" TextWrapping="Wrap" Text="{Binding DetailBody}"/>
+                <Border Margin="0,12,0,0" Background="#FFF9E8" Padding="16" CornerRadius="3"><TextBlock FontSize="15" LineHeight="24" TextWrapping="Wrap" Text="{Binding DetailBody}"/></Border>
                 <Image Margin="0,16,0,0" MaxHeight="220" Stretch="Uniform" HorizontalAlignment="Left"
-                       Source="{Binding DetailImagePath, TargetNullValue={x:Null}}"/>
+                       Source="{Binding DetailImagePath, TargetNullValue={x:Null}}" controls:ImagePreview.Path="{Binding DetailImagePath}"/>
                 <TextBlock Margin="0,16,0,0" Foreground="{StaticResource TextSecondaryBrush}" Text="{Binding DetailAttachments}" TextWrapping="Wrap"/>
                 <TextBlock Margin="0,16,0,0" FontSize="12" TextWrapping="Wrap" Text="{Binding AssistDetailText}"
                            Visibility="{Binding ShowAssistDetail, Converter={StaticResource BoolToVis}}"/>

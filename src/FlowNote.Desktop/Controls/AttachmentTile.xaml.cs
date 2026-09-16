@@ -63,6 +63,7 @@ public partial class AttachmentTile : UserControl
                 return;
         }
 
+        ImagePreview.SetPath(Thumb, AttachmentRules.IsImage(media) ? path : null);
         NameText.Text = name;
         MetaText.Text = FileSizeDisplay.Format(size);
         RemoveButton.Visibility = canRemove ? Visibility.Visible : Visibility.Collapsed;

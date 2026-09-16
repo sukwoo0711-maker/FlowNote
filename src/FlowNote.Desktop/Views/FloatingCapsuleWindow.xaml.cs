@@ -75,16 +75,29 @@ public partial class FloatingCapsuleWindow : Window
 
     public void FocusMemoFromUser()
     {
+        LogoMenu.IsOpen = false;
+        if (_viewModel.IsMultiline) _viewModel.SetPanel(CapsulePanelKind.Draft);
+        _viewModel.ClearSuccessFlash();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Show();
-        Activate();
+        ApplyPanelPlacement();
         var hwnd = new WindowInteropHelper(this).EnsureHandle();
         Native.SetForegroundWindow(hwnd);
+        Activate();
         Dispatcher.BeginInvoke(() =>
         {
-            InputBar.MemoBox.Focus();
-            Keyboard.Focus(InputBar.MemoBox);
-            InputBar.MemoBox.CaretIndex = InputBar.MemoBox.Text.Length;
-        }, DispatcherPriority.Input);
+            // A multiline draft hides the capsule TextBox; focus the visible editor instead.
+            if (!IsActive) return;
+            var target = _viewModel.IsMultiline
+                ? (PanelAbove.IsVisible ? PanelAbove.LongMemoBox : PanelBelow.LongMemoBox)
+                : InputBar.MemoBox;
+            if (!target.IsVisible || !target.IsEnabled) return;
+            var alreadyFocused = target.IsKeyboardFocused;
+            FocusManager.SetFocusedElement(FocusManager.GetFocusScope(target), target);
+            target.Focus();
+            Keyboard.Focus(target);
+            if (!alreadyFocused) target.CaretIndex = target.Text.Length;
+        }, DispatcherPriority.Loaded);
     }
 
     public FrameworkElement CapsuleSurface => CapsuleChrome;

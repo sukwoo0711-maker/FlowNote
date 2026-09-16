@@ -51,7 +51,7 @@
                     <Image DockPanel.Dock="Top" Height="56" Margin="0,6,0,0" Stretch="Uniform"
                            HorizontalAlignment="Left"
                            Visibility="{Binding ShowPeekImage, Converter={StaticResource BoolToVis}}"
-                           Source="{Binding PeekImage}"/>
+                           Source="{Binding PeekImage}" controls:ImagePreview.Path="{Binding PeekImagePath}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Style="{StaticResource CapsuleTextButton}" Content="{Binding PinPeekLabel}"
                                 Command="{Binding PinPeekCommand}" AutomationProperties.Name="고정한 메모"/>
