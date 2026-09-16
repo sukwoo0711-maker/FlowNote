@@ -110,7 +110,28 @@ public sealed class SqliteAssistStore
         var assignment = ReadAssignment(connection, transaction, entry.Id);
         StalePendingJobs(connection, transaction, entry.Id, revision);
         StaleCandidates(connection, transaction, entry.Id);
-        if (assignment is { UserLocked: true } or { Resolution: AssignmentResolution.ManualClear })
+        DeleteMentions(connection, transaction, entry.Id);
+        var keepUserLink = assignment is { UserLocked: true } or { Resolution: AssignmentResolution.ManualClear };
+        if (assignment is not null)
+        {
+            // A link chosen by the user survives an edit; meaning inferred from the old body does not.
+            WriteAssignment(connection, transaction, new EntryContextAssignment
+            {
+                EntryId = entry.Id,
+                SourceRevision = revision,
+                ThreadId = keepUserLink ? assignment.ThreadId : null,
+                Origin = assignment.Origin,
+                Resolution = keepUserLink ? assignment.Resolution : AssignmentResolution.Abstained,
+                Role = ContextRole.Unknown,
+                RoleOrigin = AssignmentOrigin.Rule,
+                SourceQuote = null,
+                AnalysisRunId = null,
+                UserLocked = assignment.UserLocked,
+                CorrectionRevision = assignment.CorrectionRevision
+            });
+        }
+
+        if (keepUserLink)
         {
             return;
         }

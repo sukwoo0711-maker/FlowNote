@@ -9,6 +9,7 @@ namespace FlowNote.Desktop;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
+    private bool _syncingTimelineSelection;
 
     public MainWindow(MainViewModel viewModel, AppSession session)
     {
@@ -58,9 +59,19 @@ public partial class MainWindow : Window
             ApplyDetailLayout();
         }
 
-        if (e.PropertyName is nameof(MainViewModel.HasDetail) && !_viewModel.HasDetail)
+        if (e.PropertyName is nameof(MainViewModel.HasDetail))
         {
-            TimelineList.SelectedItem = null;
+            _syncingTimelineSelection = true;
+            try
+            {
+                TimelineList.SelectedItem = _viewModel.HasDetail && !_viewModel.ShowWorkContext
+                    ? _viewModel.Rows.FirstOrDefault(row => row.Id == _viewModel.Session.SelectedEntryId)
+                    : null;
+            }
+            finally
+            {
+                _syncingTimelineSelection = false;
+            }
         }
 
         if (e.PropertyName is nameof(MainViewModel.IsChronological)
@@ -81,7 +92,11 @@ public partial class MainWindow : Window
 
     private void OnTimelineSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        _viewModel.Select(TimelineList.SelectedItem as TimelineRow);
+        // Replacing rows removes the old selection; only an added row is a new user selection.
+        if (!_syncingTimelineSelection && e.AddedItems.OfType<TimelineRow>().FirstOrDefault() is { } row)
+        {
+            _viewModel.Select(row);
+        }
     }
 
     private void OnViewModeClick(object sender, RoutedEventArgs e) => ApplyViewModeButtons();

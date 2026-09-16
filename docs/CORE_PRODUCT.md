@@ -1,6 +1,6 @@
 # FlowNote 핵심 제품 기준
 
-현재 유지보수 버전: **0.5.1**. 아래 0.5.0 검수는 과거 기록이며, 후속 변경·검수는 `docs/releases/0.5.1.md`를 따른다.
+현재 유지보수 버전: **0.5.3**. 현재 변경·검수는 `docs/releases/0.5.3.md`와 해당 릴리스의 `verification.json`을 따른다. 아래 이전 버전 결과는 과거 기록이다.
 
 기록일: 2026-09-16  
 대상: 현재 데스크톱 앱. 전면 재개발·새 프레임워크·새 모델·Lite 앱이 아니다.
@@ -45,7 +45,7 @@ FlowNote는 시간순 메모 나열이 아니다. 최근 기록 3개는 입력 �
 
 자동 연결이 실제로 돌지 않는 목록만 보고 “업무 흐름 구현 완료”라고 하지 않는다.
 
-## 실행 빌드
+## 과거 0.5.0 실행 빌드
 
 게시 폴더: `artifacts/win-x64/FlowNote.Desktop.exe`  
 공개 패키지: `artifacts/dist/FlowNote-0.5.0-win-x64-core.zip` / `FlowNote-0.5.0-win-x64-core-setup.exe`  

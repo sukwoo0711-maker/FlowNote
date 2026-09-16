@@ -419,6 +419,7 @@ internal sealed class SmokeHarness
         }
 
         await VerifySearchNavigationAsync();
+        await VerifyPostEditRefreshAsync();
         var resultPath = Path.Combine(_outputDir, "smoke-result.txt");
         if (_failed.Count > 0)
         {
@@ -436,6 +437,58 @@ internal sealed class SmokeHarness
             notes={string.Join(" | ", _notes)}
             """);
         return 0;
+    }
+
+    private async Task VerifyPostEditRefreshAsync()
+    {
+        _mainVm.OpenFlowCommand.Execute(null);
+        _mainVm.SearchText = "";
+        _mainVm.SearchCommand.Execute(null);
+        var entry = await _session.Database.Entries.SaveNoteAsync(new SaveNoteRequest
+        {
+            RequestId = Guid.NewGuid().ToString("D"), Body = "갱신 검수: 수정 전 기록"
+        });
+        await WaitAssistIdleAsync();
+        _session.NotifyDataChanged();
+        await WaitForLayoutAsync();
+        var list = (ListBox)_main.FindName("TimelineList");
+        list.SelectedItem = _mainVm.Rows.Single(row => row.Id == entry.Id);
+        _floatingVm.OpenRecentEntry(_floatingVm.RecentRows.Single(row => row.Id == entry.Id));
+        _session.NotifyDataChanged();
+        await WaitForLayoutAsync();
+        if (_session.SelectedEntryId != entry.Id || !_mainVm.HasDetail
+            || list.SelectedItem is not TimelineRow selected || selected.Id != entry.Id)
+            _failed.Add("목록 갱신이 선택한 원문을 닫거나 선택 표시를 지웠습니다.");
+
+        const string edited = "갱신 검수: 수정한 원문이 바로 보여야 합니다";
+        await _session.Database.Entries.UpdateNoteAsync(new UpdateNoteRequest(entry.Id, edited, null));
+        _session.NotifyDataChanged();
+        await WaitForLayoutAsync();
+        if (!_floatingVm.ShowPeek || !_floatingVm.ShowRecentPanel || _floatingVm.PeekBody != edited
+            || !VisualTreeScan.Find<TextBlock>(_floating).Any(block => block.IsVisible && block.Text == edited))
+            _failed.Add("작은 상세에 수정 전 원문이 남아 있습니다.");
+        if (_session.SelectedEntryId != entry.Id || _mainVm.DetailBody != edited)
+            _failed.Add("메인 상세가 수정한 원문을 유지하지 못했습니다.");
+        WindowCapture.Save(_floating, Path.Combine(_outputDir, "17-edited-peek.png"));
+        TryScreen(_main, "18-selected-refresh-screen.png");
+
+        await _session.Database.Entries.SoftDeleteNoteAsync(entry.Id);
+        _session.NotifyDataChanged();
+        await WaitForLayoutAsync();
+        if (_floatingVm.ShowPeek || _session.SelectedEntryId == entry.Id || _mainVm.HasDetail)
+            _failed.Add("삭제한 기록의 상세가 닫히지 않았습니다.");
+        _mainVm.CloseDetail();
+        var completedWork = (await _session.Database.WorkItems.ListByStatusAsync(WorkItemStatus.Completed)).FirstOrDefault();
+        if (completedWork is not null)
+        {
+            _mainVm.OpenWork(completedWork.Id);
+            _session.NotifyDataChanged();
+            await WaitForLayoutAsync();
+            if (!_mainVm.ShowWorkContext || _session.SelectedWorkItemId != completedWork.Id)
+                _failed.Add("업무 상세가 데이터 갱신으로 닫혔습니다.");
+            _mainVm.CloseDetail();
+        }
+        _notes.Add("checked=selection-survives-refresh;edited-peek;deleted-detail-closed;work-context-refresh");
     }
 
     private async Task VerifySearchNavigationAsync()

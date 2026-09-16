@@ -419,6 +419,7 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
     public void OpenRecentEntry(CapsuleRecentRow row)
     {
         _peekRow = row;
+        SetPanel(CapsulePanelKind.Recent);
         RaisePeek();
     }
 
@@ -894,12 +895,22 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
         }
 
         RefreshPinned();
-        if (_peekRow is not null && RecentRows.All(row => row.Id != _peekRow.Id) && Session.PinnedBoardId != _peekRow.Id)
+        if (_peekRow is not null)
         {
-            var still = Session.Database.Entries.GetByIdAsync(_peekRow.Id).GetAwaiter().GetResult();
-            if (still is null || still.DeletedAtUtc is not null)
+            var latest = RecentRows.FirstOrDefault(row => row.Id == _peekRow.Id);
+            if (latest is null)
             {
+                var still = Session.Database.Entries.GetByIdAsync(_peekRow.Id).GetAwaiter().GetResult();
+                if (still is not null && still.DeletedAtUtc is null)
+                    latest = CapsuleRecentRow.From(still, Session);
+            }
+
+            if (latest is null)
                 ClosePeek();
+            else
+            {
+                _peekRow = latest;
+                RaisePeek();
             }
         }
 

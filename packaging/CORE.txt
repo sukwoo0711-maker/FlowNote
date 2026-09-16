@@ -1,4 +1,4 @@
-FlowNote 0.5.2 핵심 배포 (Windows x64)
+FlowNote 0.5.3 핵심 배포 (Windows x64)
 
 이 묶음은 AI 엔진과 모델 파일을 넣지 않습니다.
 llama-server와 GGUF는 포함되지 않습니다.

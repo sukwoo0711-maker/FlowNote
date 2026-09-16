@@ -585,6 +585,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (!string.IsNullOrEmpty(Session.SelectedWorkItemId))
         {
             OpenWork(Session.SelectedWorkItemId);
+            return;
         }
         if (!string.IsNullOrEmpty(Session.SelectedEntryId))
         {
@@ -595,10 +596,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
             else
             {
-                HasDetail = false;
-                Raise(nameof(HasDetail));
-                Raise(nameof(ShowDetailColumn));
-                Raise(nameof(ShowDetailOverlay));
+                Select(null);
             }
         }
         else if (HasDetail)
