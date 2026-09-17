@@ -4,8 +4,8 @@
  xmlns:controls="clr-namespace:FlowNote.Desktop.Controls"
  AutomationProperties.Name="포스트잇 본문">
  <StackPanel>
-  <TextBlock Text="{Binding StickyText}" FontSize="15" FontWeight="Normal" LineHeight="24"
-             Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"
+  <TextBlock Text="{Binding StickyText}" FontSize="15" FontWeight="Normal" LineHeight="22"
+             Foreground="{StaticResource StickyInkBrush}" TextWrapping="Wrap"
              Visibility="{Binding HasStickyText, Converter={StaticResource BoolToVis}}"/>
   <Image Source="{Binding HeroImagePath}" controls:ImagePreview.Path="{Binding HeroImagePath}"
          MaxWidth="420" MaxHeight="240" Margin="0,10,0,0" Stretch="Uniform" HorizontalAlignment="Left"

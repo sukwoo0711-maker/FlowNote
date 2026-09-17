@@ -2,7 +2,8 @@
 
 This maintenance release keeps the existing layout and visual identity.
 
-- Capsule: 520 x 52 DIP, one input, at most one auxiliary panel.
+- Capsule: 520 x 52 DIP paper strip #FFF9E8, edge #E6DDC6, corner 3 DIP. One input, at most one auxiliary panel.
+- Floating panel and menu use desk paper #EDE8E1 and the same ink. No dark pill chrome.
 - Main surface: existing paper #EDE8E1 and glass-card brushes.
 - Text: #1C1C1E; secondary text: #636366; accent: #8A6A3D.
 - Use the existing Malgun Gothic / Segoe UI font settings.
@@ -15,9 +16,14 @@ This maintenance release keeps the existing layout and visual identity.
 - Preserve keyboard focus indicators, IME handling, and existing note data.
 - Generated images are not evidence of runtime rendering.
 
+## 0.5.5 paper capture
+- Floating write surface is sticky paper, not a dark pill. Size stays 520 x 52 DIP.
+- Recent notes, empty day, timeline, and panorama use the same paper object.
+
 ## 0.5.4 quick-note update
 - Notes are one body, not title plus excerpt. Preserve newlines and original storage.
 - Sticky paper surface #FFF9E8, edge #E6DDC6, corner 3 DIP; use existing ink.
+- The floating write surface is the same paper, not a dark pill. Placeholder: 한 장에 적으세요.
 - Panorama keeps automatic work grouping and request markers; group labels are small context, not editable note titles.
 - Existing records open as visible note bodies by default. Explicit collapse remains respected during refresh.
 - Image click or keyboard Enter opens an in-app zoom view. No external app or upload.

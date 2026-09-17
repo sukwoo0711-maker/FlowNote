@@ -42,21 +42,17 @@
                                              Visibility="Collapsed"/>
                     <Border x:Name="CapsuleChrome"
                     Width="520" Height="52"
-                    CornerRadius="26"
+                    CornerRadius="3"
                     ClipToBounds="True"
                     Background="{StaticResource CapsuleSurfaceBrush}"
+                    BorderBrush="{StaticResource CapsuleBorderBrush}"
+                    BorderThickness="1"
                     MouseLeftButtonDown="OnCapsuleSurfaceDown">
                 <Grid>
-                    <Border Height="20" VerticalAlignment="Top" CornerRadius="26,26,0,0"
-                            Background="{StaticResource CapsuleSheenBrush}" IsHitTestVisible="False"/>
-                    <Border CornerRadius="26" BorderBrush="{StaticResource CapsuleHighlightBrush}"
-                            BorderThickness="1,1,1,0" Opacity="0.7" IsHitTestVisible="False"/>
-                    <Border CornerRadius="26" BorderBrush="{StaticResource CapsuleBorderBrush}"
-                            BorderThickness="1" IsHitTestVisible="False"/>
                     <controls:CapsuleInputBar x:Name="InputBar"
                                               LogoMenuRequested="OnLogoMenu"
                                               RichPasteRequested="OnRichPaste"/>
-                    <Border Background="#33FFFFFF" CornerRadius="26" IsHitTestVisible="False"
+                    <Border Background="#261C1C1E" CornerRadius="3" IsHitTestVisible="False"
                             Visibility="{Binding IsDraggingFiles, Converter={StaticResource BoolToVis}}"/>
                 </Grid>
             </Border>
@@ -72,7 +68,7 @@
                AllowsTransparency="True">
             <Border Background="{StaticResource CapsulePanelBrush}"
                     BorderBrush="{StaticResource CapsuleBorderBrush}"
-                    BorderThickness="1" CornerRadius="14" Padding="8" MinWidth="196">
+                    BorderThickness="1" CornerRadius="3" Padding="8" MinWidth="196">
                 <StackPanel>
                     <Button Style="{StaticResource CapsuleTextButton}" HorizontalAlignment="Stretch"
                             Content="하루의 흐름" Command="{Binding OpenTodayCommand}" Click="OnMenuCommand"/>

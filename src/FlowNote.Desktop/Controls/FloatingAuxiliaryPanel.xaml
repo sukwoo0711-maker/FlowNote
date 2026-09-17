@@ -6,7 +6,7 @@
     <Border Background="{StaticResource CapsulePanelBrush}"
             BorderBrush="{StaticResource CapsuleBorderBrush}"
             BorderThickness="1"
-            CornerRadius="16"
+            CornerRadius="3"
             Padding="12,8,12,10">
         <Grid>
             <DockPanel x:Name="RecentHost" Visibility="{Binding ShowRecentPanel, Converter={StaticResource BoolToVis}}">
@@ -18,8 +18,7 @@
                     <Button Style="{StaticResource CapsuleTextButton}" Content="{Binding TodoFooterLabel}"
                             Command="{Binding ToggleTodoCommand}" AutomationProperties.Name="할 일 목록"/>
                 </DockPanel>
-                <Border DockPanel.Dock="Top" Padding="6,4" Margin="0,0,0,6" CornerRadius="8"
-                        Background="#22FFFFFF"
+                <Border DockPanel.Dock="Top" Style="{StaticResource StickyPaper}" Padding="8,6" Margin="0,0,0,6"
                         Visibility="{Binding ShowPinnedItem, Converter={StaticResource BoolToVis}}">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="고정 해제"
@@ -27,7 +26,7 @@
                         <StackPanel>
                             <TextBlock FontSize="11" Foreground="{StaticResource CapsuleTextSecondaryBrush}"
                                        Text="{Binding PinnedKindLabel}"/>
-                            <TextBlock FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                            <TextBlock FontSize="12" TextWrapping="Wrap" MaxHeight="36"
                                        Foreground="{StaticResource CapsuleTextPrimaryBrush}"
                                        Text="{Binding PinnedTitle}"/>
                         </StackPanel>
@@ -37,21 +36,23 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                         <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="닫기"
                                 Command="{Binding ClosePeekCommand}" AutomationProperties.Name="원문 닫기"/>
-                        <TextBlock FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                   Foreground="{StaticResource CapsuleTextPrimaryBrush}"
-                                   Text="{Binding PeekTitle}"/>
+                        <TextBlock FontSize="11" Foreground="{StaticResource CapsuleTextSecondaryBrush}"
+                                   VerticalAlignment="Center" Text="{Binding PeekTitle}"/>
                     </DockPanel>
-                    <TextBlock DockPanel.Dock="Top" FontSize="12" TextWrapping="Wrap" MaxHeight="72"
-                               Foreground="{StaticResource CapsuleTextPrimaryBrush}"
-                               Text="{Binding PeekBody}"/>
-                    <TextBlock DockPanel.Dock="Top" Margin="0,6,0,0" FontSize="11"
-                               Foreground="{StaticResource CapsuleTextSecondaryBrush}"
-                               Visibility="{Binding ShowPeekFile, Converter={StaticResource BoolToVis}}"
-                               Text="{Binding PeekFileSummary}"/>
-                    <Image DockPanel.Dock="Top" Height="56" Margin="0,6,0,0" Stretch="Uniform"
-                           HorizontalAlignment="Left"
-                           Visibility="{Binding ShowPeekImage, Converter={StaticResource BoolToVis}}"
-                           Source="{Binding PeekImage}" controls:ImagePreview.Path="{Binding PeekImagePath}"/>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource StickyPaper}" Padding="10,8">
+                        <StackPanel>
+                            <TextBlock FontSize="13" TextWrapping="Wrap" MaxHeight="72"
+                                       Foreground="{StaticResource StickyInkBrush}"
+                                       Text="{Binding PeekBody}"/>
+                            <TextBlock Margin="0,6,0,0" FontSize="11" Foreground="#636366"
+                                       Visibility="{Binding ShowPeekFile, Converter={StaticResource BoolToVis}}"
+                                       Text="{Binding PeekFileSummary}"/>
+                            <Image Height="56" Margin="0,6,0,0" Stretch="Uniform"
+                                   HorizontalAlignment="Left"
+                                   Visibility="{Binding ShowPeekImage, Converter={StaticResource BoolToVis}}"
+                                   Source="{Binding PeekImage}" controls:ImagePreview.Path="{Binding PeekImagePath}"/>
+                        </StackPanel>
+                    </Border>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Style="{StaticResource CapsuleTextButton}" Content="{Binding PinPeekLabel}"
                                 Command="{Binding PinPeekCommand}" AutomationProperties.Name="고정한 메모"/>
@@ -62,10 +63,17 @@
                     </StackPanel>
                 </DockPanel>
                 <StackPanel Visibility="{Binding ShowPeek, Converter={StaticResource InverseBoolToVis}}">
-                    <TextBlock Text="최근 기록이 없습니다"
-                               Foreground="{StaticResource CapsuleTextSecondaryBrush}" FontSize="12"
-                               Visibility="{Binding ShowRecentEmpty, Converter={StaticResource BoolToVis}}"/>
+                    <Border Style="{StaticResource StickyPaper}" Padding="10,8" Width="148" HorizontalAlignment="Left"
+                            Visibility="{Binding ShowRecentEmpty, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="최근 기록이 없습니다" FontSize="12" Foreground="#636366"
+                                   TextWrapping="Wrap"/>
+                    </Border>
                     <ItemsControl ItemsSource="{Binding RecentRows}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <controls:CompactLogRow OpenRequested="OnRecentOpen"/>
@@ -84,8 +92,7 @@
                     <Button Style="{StaticResource CapsuleTextButton}" Content="최근 기록"
                             Command="{Binding ShowRecentCommand}" AutomationProperties.Name="최근 기록"/>
                 </DockPanel>
-                <Border DockPanel.Dock="Top" Padding="6,4" Margin="0,0,0,6" CornerRadius="8"
-                        Background="#22FFFFFF"
+                <Border DockPanel.Dock="Top" Style="{StaticResource StickyPaper}" Padding="8,6" Margin="0,0,0,6"
                         Visibility="{Binding ShowPinnedItem, Converter={StaticResource BoolToVis}}">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource CapsuleTextButton}" Content="고정 해제"
@@ -93,7 +100,7 @@
                         <StackPanel>
                             <TextBlock FontSize="11" Foreground="{StaticResource CapsuleTextSecondaryBrush}"
                                        Text="{Binding PinnedKindLabel}"/>
-                            <TextBlock FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                            <TextBlock FontSize="12" TextWrapping="Wrap" MaxHeight="36"
                                        Foreground="{StaticResource CapsuleTextPrimaryBrush}"
                                        Text="{Binding PinnedTitle}"/>
                         </StackPanel>
@@ -165,16 +172,20 @@
                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding MorePendingText}" FontSize="11"
                            Foreground="{StaticResource CapsuleTextSecondaryBrush}"
                            Visibility="{Binding HasMorePending, Converter={StaticResource BoolToVis}}"/>
-                <TextBox x:Name="LongMemo"
-                         Style="{StaticResource CapsuleTextBox}"
-                         MinHeight="96" MaxHeight="144"
-                         AcceptsReturn="True" TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto"
-                         VerticalContentAlignment="Top"
-                         Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
-                         PreviewKeyDown="OnLongMemoKeyDown"
-                         DataObject.Pasting="OnLongMemoPasting"
-                         AutomationProperties.Name="긴 메모"/>
+                <Border Style="{StaticResource StickyPaper}" Padding="8,6">
+                    <TextBox x:Name="LongMemo"
+                             Style="{StaticResource CapsuleTextBox}"
+                             MinHeight="96" MaxHeight="144"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             VerticalContentAlignment="Top"
+                             Foreground="{StaticResource StickyInkBrush}"
+                             CaretBrush="{StaticResource AccentBrush}"
+                             Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
+                             PreviewKeyDown="OnLongMemoKeyDown"
+                             DataObject.Pasting="OnLongMemoPasting"
+                             AutomationProperties.Name="긴 메모"/>
+                </Border>
             </DockPanel>
         </Grid>
     </Border>

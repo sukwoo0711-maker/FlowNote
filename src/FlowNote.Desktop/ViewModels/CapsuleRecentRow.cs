@@ -28,6 +28,13 @@ public sealed class CapsuleRecentRow
 
     public string NodeKind { get; init; } = "note";
 
+    public string StickyText => NoteDisplayRules.StickyText(
+        Body,
+        Title,
+        !string.IsNullOrWhiteSpace(ImagePath) || !string.IsNullOrWhiteSpace(FileName));
+
+    public bool HasStickyText => !string.IsNullOrWhiteSpace(StickyText);
+
     public static CapsuleRecentRow From(TimelineEntry entry, AppSession session)
     {
         var zone = session.Database.DisplayTimeZone;

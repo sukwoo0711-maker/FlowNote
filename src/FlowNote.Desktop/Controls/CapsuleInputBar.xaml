@@ -121,7 +121,7 @@
                     Padding="3,0" MinWidth="12"
                     Visibility="{Binding ShowAttachBadge, Converter={StaticResource BoolToVis}}"
                     IsHitTestVisible="False">
-                <TextBlock Text="{Binding AttachBadgeText}" FontSize="9" Foreground="{StaticResource CapsuleOpaqueBrush}"/>
+                <TextBlock Text="{Binding AttachBadgeText}" FontSize="9" Foreground="{StaticResource CapsuleBadgeTextBrush}"/>
             </Border>
         </Grid>
 
@@ -150,7 +150,7 @@
                     Padding="3,0" MinWidth="12"
                     Visibility="{Binding ShowTodoBadge, Converter={StaticResource BoolToVis}}"
                     IsHitTestVisible="False">
-                <TextBlock Text="{Binding TodoBadgeText}" FontSize="9" Foreground="{StaticResource CapsuleOpaqueBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding TodoBadgeText}" FontSize="9" Foreground="{StaticResource CapsuleBadgeTextBrush}" HorizontalAlignment="Center"/>
             </Border>
         </Grid>
 

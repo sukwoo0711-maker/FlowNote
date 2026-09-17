@@ -5,12 +5,14 @@ public static class CapsuleLayout
     public const int LayoutVersion = 2;
     public const double SurfaceWidth = 520;
     public const double SurfaceHeight = 52;
-    public const double CornerRadius = 26;
+    public const double CornerRadius = 3;
     public const double Gutter = 8;
     public const double PanelGap = 6;
     public const double PanelWidthInset = 40;
     public const double PanelCornerRadius = 14;
-    public const double PreviewRowHeight = 28;
+    public const double PreviewRowHeight = 80;
+    public const double PreviewNoteWidth = 148;
+    public const double PreviewNoteHeight = 80;
     public const double MaxPreviewVisibleHeight = 240;
     public const double MaxEditVisibleHeight = 320;
     public const int PreviewRowCount = 3;

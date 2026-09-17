@@ -335,8 +335,21 @@
                             <Grid>
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Visibility="{Binding ShowEmpty, Converter={StaticResource BoolToVis}}">
-                                    <controls:LiveDots DotSize="10" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Text="{Binding EmptyPrimary}"/>
+                                    <Button Style="{StaticResource StickyPaperButton}"
+                                            Command="{Binding FirstRecordCommand}"
+                                            AutomationProperties.Name="첫 포스트잇 쓰기">
+                                        <Border Style="{StaticResource StickyPaper}" Width="300" MinHeight="168" Padding="18,16">
+                                            <StackPanel>
+                                                <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                                           Text="빈 종이"/>
+                                                <TextBlock Margin="0,12,0,0" FontSize="15" LineHeight="22"
+                                                           Foreground="{StaticResource StickyInkBrush}"
+                                                           TextWrapping="Wrap"
+                                                           Text="한 장에 적어도 됩니다. 제목은 필요 없습니다."/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+                                    <TextBlock Margin="0,16,0,0" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Text="{Binding EmptyPrimary}"/>
                                     <Button Margin="0,12,0,0" Content="첫 기록 남기기" Command="{Binding FirstRecordCommand}"/>
                                     <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
                                                Text="샘플 하루는 데모 저장소(--demo)에서만 생성합니다."
@@ -449,19 +462,17 @@
                                                                         <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate>
-                                                                                <Border Margin="0,10,12,4" Padding="16" CornerRadius="3" Width="300"
-                                                                                        Background="#FFF9E8" BorderBrush="#E6DDC6" BorderThickness="1">
-                                                                                    <StackPanel>
-                                                                                        <DockPanel Margin="0,0,0,10">
-                                                                                            <TextBlock DockPanel.Dock="Left" Text="{Binding TimeLabel}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                                                            <Button Content="원문 보기" Style="{StaticResource GhostButton}" HorizontalAlignment="Right"
-                                                                                                    MinHeight="24" Padding="6,0" FontSize="11"
-                                                                                                    Command="{Binding DataContext.OpenPanoramaNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                                                    CommandParameter="{Binding}" AutomationProperties.Name="원문 열기"/>
-                                                                                        </DockPanel>
-                                                                                        <controls:StickyNoteContent/>
-                                                                                    </StackPanel>
-                                                                                </Border>
+                                                                                <Button Margin="0,10,12,4" Style="{StaticResource StickyPaperButton}"
+                                                                                        Command="{Binding DataContext.OpenPanoramaNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        AutomationProperties.Name="포스트잇 원문">
+                                                                                    <Border Style="{StaticResource StickyPaper}" Padding="14" Width="300">
+                                                                                        <StackPanel>
+                                                                                            <TextBlock Text="{Binding TimeLabel}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                                                            <controls:StickyNoteContent Margin="0,8,0,0"/>
+                                                                                        </StackPanel>
+                                                                                    </Border>
+                                                                                </Button>
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>

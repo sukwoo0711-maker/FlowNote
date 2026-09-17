@@ -31,6 +31,37 @@
             <SolidColorBrush x:Key="HairlineBrush" Color="#59FFFFFF"/>
             <SolidColorBrush x:Key="FocusRingBrush" Color="#1C1C1E"/>
             <SolidColorBrush x:Key="OnAccentBrush" Color="#F7F4EE"/>
+            <SolidColorBrush x:Key="StickyPaperBrush" Color="#FFF9E8"/>
+            <SolidColorBrush x:Key="StickyEdgeBrush" Color="#E6DDC6"/>
+            <SolidColorBrush x:Key="StickyInkBrush" Color="#1C1C1E"/>
+
+            <Style x:Key="StickyPaper" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource StickyPaperBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource StickyEdgeBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="3"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+            </Style>
+            <Style x:Key="StickyPaperButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="MinHeight" Value="32"/>
+                <Setter Property="MinWidth" Value="32"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
             <LinearGradientBrush x:Key="GlassCardBrush" StartPoint="0.08,0" EndPoint="0.92,1">
                 <GradientStop Color="#B8FFFFFF" Offset="0"/>

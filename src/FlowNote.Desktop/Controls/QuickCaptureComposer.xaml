@@ -6,38 +6,30 @@
              AutomationProperties.Name="빠른 기록">
     <StackPanel>
         <Grid>
-            <TextBox x:Name="BodyBox"
-                     MinHeight="80"
-                     MaxHeight="160"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto"
-                     Padding="10,8"
-                     VerticalContentAlignment="Top"
-                     BorderThickness="0"
-                     Background="{StaticResource SurfaceMutedBrush}"
-                     Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
-                     TextChanged="OnBodyChanged"
-                     AutomationProperties.Name="메모 본문">
-                <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                        <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter Property="BorderThickness" Value="2"/>
-                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-                                <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBox.Style>
-            </TextBox>
-            <TextBlock x:Name="Placeholder"
-                       Margin="12,10,12,0"
-                       Foreground="{StaticResource TextSecondaryBrush}"
-                       IsHitTestVisible="False"
-                       Text="지금 남겨둘 내용이 있나요?"/>
+            <Border Style="{StaticResource StickyPaper}">
+                <Grid>
+                    <TextBox x:Name="BodyBox"
+                             MinHeight="96"
+                             MaxHeight="160"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             Padding="12,10"
+                             VerticalContentAlignment="Top"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Foreground="{StaticResource StickyInkBrush}"
+                             CaretBrush="{StaticResource AccentBrush}"
+                             Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
+                             TextChanged="OnBodyChanged"
+                             AutomationProperties.Name="메모 본문"/>
+                    <TextBlock x:Name="Placeholder"
+                               Margin="14,12,12,0"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               IsHitTestVisible="False"
+                               Text="한 장에 적어도 됩니다"/>
+                </Grid>
+            </Border>
         </Grid>
         <TextBlock Margin="0,8,0,0"
                    FontSize="12"

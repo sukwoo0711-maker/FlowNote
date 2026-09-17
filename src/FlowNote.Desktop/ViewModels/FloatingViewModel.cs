@@ -172,7 +172,7 @@ public sealed class FloatingViewModel : INotifyPropertyChanged, IPendingAttachme
 
     public string SuccessFlash => _successFlash ?? "";
 
-    public string Placeholder => "지금 떠오른 것을 기록하세요…";
+    public string Placeholder => "한 장에 적으세요";
 
     public CapsulePanelKind PanelKind => _panelKind;
 

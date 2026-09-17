@@ -16,7 +16,7 @@
                 <ControlTemplate TargetType="Button">
                     <Grid Background="Transparent">
                         <Border Width="16" Height="16"
-                                BorderBrush="#FFD1E0E7" BorderThickness="1.5"
+                                BorderBrush="#8A6A3D" BorderThickness="1.5"
                                 CornerRadius="3" Background="Transparent"/>
                     </Grid>
                 </ControlTemplate>
@@ -26,7 +26,7 @@
                 HorizontalContentAlignment="Left" Click="OnOpen"
                 AutomationProperties.Name="할 일 고정">
             <TextBlock Text="{Binding Title}" FontSize="12"
-                       Foreground="#FFF2F6F8" TextTrimming="CharacterEllipsis"
+                       Foreground="#1C1C1E" TextTrimming="CharacterEllipsis"
                        VerticalAlignment="Center"/>
         </Button>
     </Grid>

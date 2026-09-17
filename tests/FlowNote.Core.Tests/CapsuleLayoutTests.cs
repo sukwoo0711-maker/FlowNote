@@ -9,7 +9,7 @@ public sealed class CapsuleLayoutTests
     {
         Assert.Equal(536, CapsuleLayout.HostWidth);
         Assert.Equal(68, CapsuleLayout.HostHeightWithoutPanel);
-        Assert.Equal(26, CapsuleLayout.CornerRadius);
+        Assert.Equal(3, CapsuleLayout.CornerRadius);
         Assert.Equal(480, CapsuleLayout.PanelWidth);
     }
 
@@ -18,6 +18,10 @@ public sealed class CapsuleLayoutTests
     {
         Assert.Equal(68, CapsuleLayout.HostHeightWithoutPanel);
         Assert.Equal(174, CapsuleLayout.HostHeightWithPanel(100));
+        Assert.Equal(148, CapsuleLayout.PreviewNoteWidth);
+        Assert.Equal(80, CapsuleLayout.PreviewNoteHeight);
+        Assert.True(CapsuleLayout.PreviewNoteWidth * 3 + 16 <= CapsuleLayout.PanelWidth);
+        Assert.True(CapsuleLayout.HostHeightWithPanel(CapsuleLayout.PreviewNoteHeight + 56) <= CapsuleLayout.MaxPreviewVisibleHeight);
     }
 
     [Fact]
